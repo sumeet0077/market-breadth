@@ -11,9 +11,10 @@ export type MarketData = {
     "No. of stocs down 4.5%+ in the current day": number;
     "No. of stocks up 20%+ in 5 days": number;
     "No. of stocks down 20%+ in 5 days": number;
-    "No of stocks above 200 day simple moving average": number;
-    "No of stocks above 50 day simple moving average": number;
-    "No of stocks above 20 day simple moving average": number;
+    "No of stocks above 200 day SMA": number;
+    "% Stocks > 200 SMA": number;
+    "No of stocks above 50 day SMA": number;
+    "No of stocks above 20 day SMA": number;
     "No of stocks which are positive": number;
     "No of stocks which are negative": number;
     "Advance/Decline Ratio": number;
@@ -24,17 +25,18 @@ export type MarketData = {
 
 interface HeatmapProps {
     initialData: MarketData[];
+    visibleColumns?: string[];
 }
 
-// Configuration for metrics (Color scales and Formatting)
-const METRIC_CONFIG: Record<string, { type: 'good' | 'bad' | 'diverging'; format: 'int' | 'float' | 'pct' }> = {
+export const METRIC_CONFIG: Record<string, { type: 'good' | 'bad' | 'diverging'; format: 'int' | 'float' | 'pct' }> = {
     "No. of stocks up 4.5%+ in the current day": { type: 'good', format: 'int' },
     "No. of stocs down 4.5%+ in the current day": { type: 'bad', format: 'int' },
     "No. of stocks up 20%+ in 5 days": { type: 'good', format: 'int' },
     "No. of stocks down 20%+ in 5 days": { type: 'bad', format: 'int' },
-    "No of stocks above 200 day simple moving average": { type: 'good', format: 'int' },
-    "No of stocks above 50 day simple moving average": { type: 'good', format: 'int' },
-    "No of stocks above 20 day simple moving average": { type: 'good', format: 'int' },
+    "No of stocks above 200 day SMA": { type: 'good', format: 'int' },
+    "% Stocks > 200 SMA": { type: 'good', format: 'pct' },
+    "No of stocks above 50 day SMA": { type: 'good', format: 'int' },
+    "No of stocks above 20 day SMA": { type: 'good', format: 'int' },
     "No of stocks which are positive": { type: 'good', format: 'int' },
     "No of stocks which are negative": { type: 'bad', format: 'int' },
     "Advance/Decline Ratio": { type: 'diverging', format: 'float' },
@@ -42,7 +44,8 @@ const METRIC_CONFIG: Record<string, { type: 'good' | 'bad' | 'diverging'; format
     "Net New 52-Week Highs as % of Total Stocks": { type: 'diverging', format: 'pct' },
 };
 
-export function Heatmap({ initialData }: HeatmapProps) {
+export function Heatmap({ initialData, visibleColumns }: HeatmapProps) {
+    const columnsToShow = visibleColumns || Object.keys(METRIC_CONFIG);
     // Sort State
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'Date', direction: 'desc' });
 
@@ -110,7 +113,7 @@ export function Heatmap({ initialData }: HeatmapProps) {
                                 )}
                             </div>
                         </th>
-                        {Object.keys(METRIC_CONFIG).map((key) => (
+                        {columnsToShow.map((key) => (
                             <th
                                 key={key}
                                 className="px-2 py-4 font-semibold text-center border-b border-l border-slate-800 min-w-[100px] max-w-[140px] break-words hover:text-slate-200 transition-colors"
@@ -132,7 +135,7 @@ export function Heatmap({ initialData }: HeatmapProps) {
                             <td className="px-4 py-3 font-medium text-slate-300 whitespace-nowrap bg-slate-950 sticky left-0 z-20 border-r border-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
                                 {new Date(row.Date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}
                             </td>
-                            {Object.keys(METRIC_CONFIG).map((key) => {
+                            {columnsToShow.map((key) => {
                                 const val = row[key] as number | null | undefined;
                                 const conf = METRIC_CONFIG[key];
 

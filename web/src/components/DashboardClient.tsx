@@ -1,42 +1,49 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { MarketData } from '@/components/Heatmap';
+import { MarketData, METRIC_CONFIG } from '@/components/Heatmap';
 import { Heatmap } from './Heatmap';
-import { ArrowUp, ArrowDown, Calendar, Search } from 'lucide-react';
+import { ArrowUp, ArrowDown, Calendar, Search, Settings, Check } from 'lucide-react';
 
 interface DashboardClientProps {
-    initialData: any[]; // Using any[] to map to generic MarketData structure 
+    initialData: any[];
 }
 
 export function DashboardClient({ initialData }: DashboardClientProps) {
     // 1. State: Date Range
-    // find min/max dates
     const sortedByDate = useMemo(() =>
         [...initialData].sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime()),
         [initialData]);
 
     const maxDate = sortedByDate[0]?.Date || new Date().toISOString().split('T')[0];
     const minDate = sortedByDate[sortedByDate.length - 1]?.Date || "2022-01-01";
-
-    // Default: Last 30 days or Max range if small
     const defaultStart = new Date(new Date(maxDate).getTime() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     const [startDate, setStartDate] = useState(defaultStart);
     const [endDate, setEndDate] = useState(maxDate);
 
+    // Column Visibility State
+    const allMetrics = Object.keys(METRIC_CONFIG);
+    const [selectedMetrics, setSelectedMetrics] = useState<string[]>(allMetrics);
+    const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
+
     // Reset Handler
     const handleReset = () => {
         setStartDate(minDate);
         setEndDate(maxDate);
+        setSelectedMetrics(allMetrics);
     }
+
+    const toggleMetric = (metric: string) => {
+        setSelectedMetrics(prev =>
+            prev.includes(metric) ? prev.filter(m => m !== metric) : [...prev, metric]
+        );
+    };
 
     // 2. Filter Data
     const filteredData = useMemo(() => {
         const s = new Date(startDate).getTime();
         const e = new Date(endDate).getTime();
-
-        // Handle potential swap or invalid partial entry fluidly
         const effectiveStart = Math.min(s, e);
         const effectiveEnd = Math.max(s, e);
 
@@ -46,7 +53,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         });
     }, [initialData, startDate, endDate]);
 
-    // 3. Derived KPI Logic
+    // 3. Derived KPI Logic (Schema Updated)
     const sortedFiltered = useMemo(() =>
         [...filteredData].sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime())
         , [filteredData]);
@@ -54,14 +61,16 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     const latestView = sortedFiltered[0];
     const prevView = sortedFiltered[1] || latestView;
 
-    // KPI Calculations
-    const kpiAbove200Pct = latestView ? (latestView["No of stocks above 200 day simple moving average"] / latestView["TotalTraded"] * 100) : 0;
-    const kpiAbove200PctPrev = prevView ? (prevView["No of stocks above 200 day simple moving average"] / prevView["TotalTraded"] * 100) : 0;
+    // KPI Calculations (Using new schema keys)
+    // "No of stocks above 200 day simple moving average" -> "No of stocks above 200 day SMA"
+    const kpiAbove200Pct = latestView ? (latestView["% Stocks > 200 SMA"] || 0) : 0;
+    const kpiAbove200PctPrev = prevView ? (prevView["% Stocks > 200 SMA"] || 0) : 0;
+
 
     return (
         <div className="space-y-8">
             {/* Controls */}
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/50 p-4 rounded-xl border border-slate-800 backdrop-blur-sm sticky top-4 z-20 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/50 p-4 rounded-xl border border-slate-800 backdrop-blur-sm sticky top-4 z-50 shadow-xl">
                 <div className="flex items-center gap-4">
                     <div className="flex flex-col gap-1">
                         <label className="text-xs text-slate-400 uppercase font-semibold">Start Date</label>
@@ -87,26 +96,60 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                             className="bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none w-40 cursor-pointer"
                         />
                     </div>
+
+                    {/* Reset Button */}
                     <button
                         onClick={handleReset}
                         className="mt-5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded transition-colors flex items-center gap-2"
                     >
-                        <Calendar className="w-4 h-4" /> Reset View
+                        <Calendar className="w-4 h-4" /> Reset
                     </button>
+
+                    {/* Column Toggle Dropdown */}
+                    <div className="relative mt-5">
+                        <button
+                            onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
+                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded transition-colors flex items-center gap-2"
+                        >
+                            <Settings className="w-4 h-4" /> Columns ({selectedMetrics.length})
+                        </button>
+
+                        {isColumnMenuOpen && (
+                            <div className="absolute top-12 left-0 w-64 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl p-2 z-50 max-h-[60vh] overflow-y-auto">
+                                <div className="flex justify-between items-center px-2 pb-2 mb-2 border-b border-slate-800">
+                                    <span className="text-xs font-semibold text-slate-400">Select Metrics</span>
+                                    <button onClick={() => setSelectedMetrics(allMetrics)} className="text-xs text-blue-400 hover:text-blue-300">Select All</button>
+                                </div>
+                                {allMetrics.map(metric => (
+                                    <button
+                                        key={metric}
+                                        onClick={() => toggleMetric(metric)}
+                                        className="w-full flex items-start gap-3 px-2 py-2 hover:bg-slate-800 rounded text-left text-xs text-slate-200"
+                                    >
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${selectedMetrics.includes(metric) ? 'bg-blue-600 border-blue-600' : 'border-slate-600'}`}>
+                                            {selectedMetrics.includes(metric) && <Check className="w-3 h-3 text-white" />}
+                                        </div>
+                                        <span className="leading-tight">{metric}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    {isColumnMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setIsColumnMenuOpen(false)} />}
                 </div>
                 <div className="text-xs text-slate-500 font-mono">
                     Showing {filteredData.length} records
                 </div>
             </div>
 
-            {/* KPI Stats Grid - UPDATED with Requested Metrics */}
+            {/* KPI Stats Grid - UPDATED with Requested Metrics using new Schema */}
             {latestView && (
                 <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* 1. Stocks > 200 SMA % */}
                     <KpiCard
                         label="Stocks > 200 SMA"
                         value={`${kpiAbove200Pct.toFixed(1)}%`}
-                        subValue={`(${latestView["No of stocks above 200 day simple moving average"]} / ${latestView["TotalTraded"]})`}
+                        subValue={`(${latestView["No of stocks above 200 day SMA"]} / ${latestView["TotalTraded"]})`}
                         delta={(kpiAbove200Pct - kpiAbove200PctPrev).toFixed(1) + "%"}
                         isGood={true}
                     />
@@ -131,7 +174,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
             {/* Main Heatmap */}
             <section className="space-y-4">
-                <Heatmap initialData={filteredData} />
+                <Heatmap initialData={filteredData} visibleColumns={selectedMetrics} />
             </section>
         </div>
     );
