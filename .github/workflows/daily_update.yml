@@ -1,0 +1,52 @@
+name: Daily Data Update
+
+on:
+  schedule:
+    # Run at 18:00 IST (12:30 UTC) every weekday
+    - cron: '30 12 * * 1-5'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Python Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Data Pipeline
+        run: |
+          # 1. Fetch Data
+          python scripts/fetch_data.py
+          # 2. Process Data
+          python scripts/process_data.py
+          # 3. Calculate Metrics
+          python scripts/calculate_metrics.py
+          
+          # 4. Move JSON to Web Public folder (Crucial for Next.js)
+          cp data/market_breadth.json web/public/market_breadth.json
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          
+          # Check if there are changes
+          if [[ -n $(git status -s) ]]; then
+            git add data/ web/public/market_breadth.json
+            git commit -m "📈 Auto-update: Market Breadth Data [skip ci]"
+            git push
+          else
+            echo "No changes to commit."
+          fi
