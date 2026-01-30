@@ -95,12 +95,12 @@ export function Heatmap({ initialData }: HeatmapProps) {
     };
 
     return (
-        <div className="w-full overflow-x-auto border border-slate-800 rounded-lg shadow-2xl bg-slate-950">
-            <table className="w-full text-sm text-left border-collapse">
-                <thead className="text-xs uppercase bg-slate-900 text-slate-400 sticky top-0 z-10 shadow-md cursor-pointer select-none">
+        <div className="w-full max-h-[80vh] overflow-y-auto overflow-x-auto border border-slate-800 rounded-lg shadow-2xl bg-slate-950">
+            <table className="w-full text-sm text-left border-collapse relative">
+                <thead className="text-xs uppercase bg-slate-900 text-slate-400 sticky top-0 z-30 shadow-md cursor-pointer select-none ring-1 ring-slate-800">
                     <tr>
                         <th
-                            className="px-4 py-4 font-semibold tracking-wider border-b border-slate-800 min-w-[120px] hover:text-slate-200 transition-colors group"
+                            className="px-4 py-4 font-semibold tracking-wider border-b border-slate-800 min-w-[120px] hover:text-slate-200 transition-colors group sticky left-0 z-40 bg-slate-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]"
                             onClick={() => handleSort('Date')}
                         >
                             <div className="flex items-center gap-1">
@@ -129,7 +129,7 @@ export function Heatmap({ initialData }: HeatmapProps) {
                 <tbody className="divide-y divide-slate-800">
                     {sortedData.map((row) => (
                         <tr key={row.Date} className="hover:bg-slate-900/50 transition-colors">
-                            <td className="px-4 py-3 font-medium text-slate-300 whitespace-nowrap bg-slate-950 sticky left-0 z-10 border-r border-slate-800">
+                            <td className="px-4 py-3 font-medium text-slate-300 whitespace-nowrap bg-slate-950 sticky left-0 z-20 border-r border-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
                                 {new Date(row.Date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}
                             </td>
                             {Object.keys(METRIC_CONFIG).map((key) => {
