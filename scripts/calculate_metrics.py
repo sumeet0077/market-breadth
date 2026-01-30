@@ -1,5 +1,6 @@
 import polars as pl
 import os
+from datetime import datetime
 
 INPUT_FILE = "data/master_bhavcopy.parquet"
 OUTPUT_FILE = "data/market_breadth_metrics.parquet"
@@ -126,6 +127,9 @@ def calculate_breadth_aggregates(df):
         "Net New 52-Week Highs as % of Total Stocks"
     ]
     
+    # Filter for display (User wants to see 2022 onwards only)
+    daily_stats = daily_stats.filter(pl.col("Date") >= datetime(2022, 1, 1))
+
     return daily_stats.select(final_cols).sort("Date")
 
 def main():

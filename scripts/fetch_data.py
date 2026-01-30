@@ -1,12 +1,13 @@
 import requests
 from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import os
 import time
 import random
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # Configuration
-START_DATE = datetime(2022, 1, 1) # Warm-up for 52-week highs
+START_DATE = datetime(2021, 1, 1) # Warm-up for 52-week highs
 END_DATE = datetime.now()
 DATA_DIR = "data/raw_bhavcopies"
 
