@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv
+.env
+*.DS_Store
+
+# Data (Exclude heavy files)
+data/raw_bhavcopies/
+data/*.parquet
+data/*.csv
+data/master_bhavcopy.parquet
+# Keep the processed JSON for the dashboard
+!data/market_breadth.json
+
+# Node / Next.js
+node_modules/
+.next/
+web/node_modules/
+web/.next/
+
+# IDE
+.vscode/
+.idea/
