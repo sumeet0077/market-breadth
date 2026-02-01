@@ -49,9 +49,14 @@ def download_file(date_obj):
             print(f"Removed empty file {local_path}")
             os.remove(local_path)
 
-    # Skip weekends
-    if date_obj.weekday() >= 5: 
-        return f"Skipped {date_obj.date()} (Weekend)"
+    # Optimized Weekend Skeeping:
+    # Only check weekends if they are recent (last 30 days) to catch special sessions like Budget Day.
+    # Skip older weekends to save time (NSE doesn't have data for them anyway).
+    is_weekend = date_obj.weekday() >= 5
+    is_recent = (datetime.now() - date_obj).days < 30
+    
+    if is_weekend and not is_recent:
+         return f"Skipped {date_obj.date()} (Weekend, Old)"
 
     try:
         # NSE often blocks if no cookies are set. Visiting homepage first once might help, 

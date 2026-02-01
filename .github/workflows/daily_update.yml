@@ -2,8 +2,8 @@ name: Daily Data Update
 
 on:
   schedule:
-    # Run at 18:00 IST (12:30 UTC) every weekday
-    - cron: '30 12 * * 1-5'
+    # Run at 18:00 IST (12:30 UTC) every day (to catch special sessions)
+    - cron: '30 12 * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
