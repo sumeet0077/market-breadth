@@ -3,7 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { MarketData, METRIC_CONFIG } from '@/components/Heatmap';
 import { Heatmap } from './Heatmap';
-import { ArrowUp, ArrowDown, Calendar, Search, Settings, Check } from 'lucide-react';
+import { ArrowUp, ArrowDown, Calendar, Search, Settings, Check, LineChart } from 'lucide-react';
+import Link from 'next/link';
 
 interface DashboardClientProps {
     initialData: any[];
@@ -108,6 +109,14 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
                     {/* Column Toggle Dropdown */}
                     <div className="relative mt-5 flex gap-3">
+                        {/* Charts View Link */}
+                        <Link
+                            href="/charts"
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded transition-colors flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+                        >
+                            <LineChart className="w-4 h-4" /> Charts
+                        </Link>
+
                         {/* Percentage Toggle */}
                         <button
                             onClick={() => setShowPercentages(!showPercentages)}
