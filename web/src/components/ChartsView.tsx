@@ -19,8 +19,8 @@ export function ChartsView({ initialData }: ChartsViewProps) {
     const maxDate = allSorted[0]?.Date || new Date().toISOString().split('T')[0];
     const minDate = allSorted[allSorted.length - 1]?.Date || "2022-01-01";
 
-    // Default to last 60 days
-    const defaultStart = new Date(new Date(maxDate).getTime() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    // Default to FULL range
+    const defaultStart = minDate;
 
     // 2. State
     const [startDate, setStartDate] = useState(defaultStart);
@@ -117,7 +117,7 @@ export function ChartsView({ initialData }: ChartsViewProps) {
             {/* Expanded Modal */}
             {expandedMetric && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl overflow-hidden relative">
                         {/* Close Button */}
                         <button
                             onClick={() => setExpandedMetric(null)}
@@ -143,6 +143,7 @@ export function ChartsView({ initialData }: ChartsViewProps) {
 
 function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: string, data: MarketData[], onExpand?: () => void, isExpanded?: boolean }) {
     const isRatio = metric === "Advance/Decline Ratio";
+    const isNetNewHighs = metric === "Net New Highs";
     const config = METRIC_CONFIG[metric];
 
     // Process data for this chart
@@ -173,11 +174,27 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     }, [data, metric, isRatio]);
 
     const title = isRatio ? metric : `${metric} (%)`;
-    const color = config.type === 'bad' ? '#ef4444' : '#22c52e'; // Corrected green color to match original
+    const color = config.type === 'bad' ? '#ef4444' : '#22c55e';
+
+    // Gradient Offset for Net New Highs
+    const gradientOffset = useMemo(() => {
+        if (!isNetNewHighs || chartData.length === 0) return 0;
+
+        const dataMax = Math.max(...chartData.map((i) => i.Value));
+        const dataMin = Math.min(...chartData.map((i) => i.Value));
+
+        if (dataMax <= 0) return 0;
+        if (dataMin >= 0) return 1;
+
+        return dataMax / (dataMax - dataMin);
+    }, [chartData, isNetNewHighs]);
 
     const isBadMetric = config.type === 'bad';
-    const topAreaColor = isBadMetric ? "#ef4444" : "#22c52e"; // Corrected green color
-    const bottomAreaColor = isBadMetric ? "#22c52e" : "#ef4444"; // Corrected green color
+    const topAreaColor = isBadMetric ? "#ef4444" : "#22c55e";
+    const bottomAreaColor = isBadMetric ? "#22c55e" : "#ef4444";
+
+    // Banding logic: Show if NOT Ratio AND NOT 4.5% metrics
+    const showBanding = !isRatio && !metric.includes("4.5%");
 
     return (
         <div className={`bg-slate-900 border border-slate-800 rounded-xl shadow-lg flex flex-col ${isExpanded ? 'h-full border-none shadow-none bg-transparent' : 'h-[300px] p-4'}`}>
@@ -201,8 +218,17 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                     <LineChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
 
+                        {isNetNewHighs && (
+                            <defs>
+                                <linearGradient id="splitColorNetHighs" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset={gradientOffset} stopColor="#22c55e" stopOpacity={1} />
+                                    <stop offset={gradientOffset} stopColor="#ef4444" stopOpacity={1} />
+                                </linearGradient>
+                            </defs>
+                        )}
+
                         {/* Extreme Range Highlights */}
-                        {!isRatio && (
+                        {showBanding && (
                             <>
                                 <ReferenceArea y1={80} y2={100} fill={topAreaColor} fillOpacity={0.1} />
                                 <ReferenceArea y1={0} y2={20} fill={bottomAreaColor} fillOpacity={0.1} />
@@ -210,7 +236,7 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                         )}
                         {isRatio && (
                             <>
-                                <ReferenceArea y1={4} y2={50} fill="#22c52e" fillOpacity={0.1} /> {/* Corrected green color */}
+                                <ReferenceArea y1={4} y2={50} fill="#22c55e" fillOpacity={0.1} />
                                 <ReferenceArea y1={0} y2={0.25} fill="#ef4444" fillOpacity={0.1} />
                             </>
                         )}
@@ -246,10 +272,13 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                         <Line
                             type="monotone"
                             dataKey="Value"
-                            stroke={color}
+                            stroke={isNetNewHighs ? "url(#splitColorNetHighs)" : color}
                             strokeWidth={isExpanded ? 3 : 2}
                             dot={false}
-                            activeDot={{ r: isExpanded ? 6 : 4, fill: color }}
+                            activeDot={isNetNewHighs
+                                ? (props: any) => <circle cx={props.cx} cy={props.cy} r={isExpanded ? 6 : 4} fill={props.payload.Value >= 0 ? "#22c55e" : "#ef4444"} />
+                                : { r: isExpanded ? 6 : 4, fill: color }
+                            }
                         />
 
                         {metric === "Net New Highs" && <ReferenceLine y={0} stroke="#374151" />}
