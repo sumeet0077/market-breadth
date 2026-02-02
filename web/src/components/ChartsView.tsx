@@ -176,22 +176,28 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     const title = isRatio ? metric : `${metric} (%)`;
     const color = config.type === 'bad' ? '#ef4444' : '#22c55e';
 
-    // Gradient Offset for Net New Highs
+    // Gradient Offset Logic
+    const threshold = isRatio ? 1 : 0;
+    const isDiverging = isNetNewHighs || isRatio;
+
     const gradientOffset = useMemo(() => {
-        if (!isNetNewHighs || chartData.length === 0) return 0;
+        if (!isDiverging || chartData.length === 0) return 0;
 
         const dataMax = Math.max(...chartData.map((i) => i.Value));
         const dataMin = Math.min(...chartData.map((i) => i.Value));
 
-        if (dataMax <= 0) return 0;
-        if (dataMin >= 0) return 1;
+        if (dataMax <= threshold) return 0;
+        if (dataMin >= threshold) return 1;
 
-        return dataMax / (dataMax - dataMin);
-    }, [chartData, isNetNewHighs]);
+        return (dataMax - threshold) / (dataMax - dataMin);
+    }, [chartData, isDiverging, threshold]);
 
     const isBadMetric = config.type === 'bad';
     const topAreaColor = isBadMetric ? "#ef4444" : "#22c55e";
     const bottomAreaColor = isBadMetric ? "#22c55e" : "#ef4444";
+
+    // Gradient ID
+    const gradientId = `splitColor-${metric.replace(/\s+/g, '')}`;
 
     // Banding logic: Show if NOT Ratio AND NOT 4.5% metrics
     const showBanding = !isRatio && !metric.includes("4.5%");
@@ -218,9 +224,9 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                     <LineChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
 
-                        {isNetNewHighs && (
+                        {isDiverging && (
                             <defs>
-                                <linearGradient id="splitColorNetHighs" x1="0" y1="0" x2="0" y2="1">
+                                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                                     <stop offset={gradientOffset} stopColor="#22c55e" stopOpacity={1} />
                                     <stop offset={gradientOffset} stopColor="#ef4444" stopOpacity={1} />
                                 </linearGradient>
@@ -272,11 +278,11 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                         <Line
                             type="monotone"
                             dataKey="Value"
-                            stroke={isNetNewHighs ? "url(#splitColorNetHighs)" : color}
+                            stroke={isDiverging ? `url(#${gradientId})` : color}
                             strokeWidth={isExpanded ? 3 : 2}
                             dot={false}
-                            activeDot={isNetNewHighs
-                                ? (props: any) => <circle cx={props.cx} cy={props.cy} r={isExpanded ? 6 : 4} fill={props.payload.Value >= 0 ? "#22c55e" : "#ef4444"} />
+                            activeDot={isDiverging
+                                ? (props: any) => <circle cx={props.cx} cy={props.cy} r={isExpanded ? 6 : 4} fill={props.payload.Value >= threshold ? "#22c55e" : "#ef4444"} />
                                 : { r: isExpanded ? 6 : 4, fill: color }
                             }
                         />
