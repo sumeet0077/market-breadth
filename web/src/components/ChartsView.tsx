@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useMemo, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea } from 'recharts';
+import React, { useMemo, useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Brush } from 'recharts';
 import { METRIC_CONFIG, MarketData } from './Heatmap';
-import { ArrowLeft, Calendar, Maximize2, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Maximize2, X, ZoomIn, ZoomOut, RotateCcw, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 interface ChartsViewProps {
@@ -117,7 +117,7 @@ export function ChartsView({ initialData }: ChartsViewProps) {
             {/* Expanded Modal */}
             {expandedMetric && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl overflow-hidden relative">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-[95vw] h-[90vh] flex flex-col shadow-2xl overflow-hidden relative">
                         {/* Close Button */}
                         <button
                             onClick={() => setExpandedMetric(null)}
@@ -202,12 +202,94 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     // Banding logic: Show if NOT Ratio AND NOT 4.5% metrics
     const showBanding = !isRatio && !metric.includes("4.5%");
 
+    // State for Zoom/Pan
+    const [zoomState, setZoomState] = useState<{ left: number, right: number }>({ left: 0, right: 0 });
+
+    // Initialize zoom on data load or expand
+    useEffect(() => {
+        if (chartData.length > 0) {
+            setZoomState({ left: 0, right: chartData.length - 1 });
+        }
+    }, [chartData.length]);
+
+    // Handlers
+    const handleZoomIn = () => {
+        const { left, right } = zoomState;
+        const span = right - left;
+        if (span <= 5) return; // Prevent zooming too far in
+
+        const newSpan = Math.floor(span * 0.8); // 20% zoom
+        const diff = span - newSpan;
+        const newLeft = Math.min(chartData.length - 1, Math.floor(left + diff / 2));
+        const newRight = Math.max(0, Math.ceil(right - diff / 2));
+        setZoomState({ left: newLeft, right: newRight });
+    };
+
+    const handleZoomOut = () => {
+        const { left, right } = zoomState;
+        const span = right - left;
+        if (span >= chartData.length - 1) { // Already at max zoom out
+            setZoomState({ left: 0, right: chartData.length - 1 });
+            return;
+        }
+
+        const newSpan = Math.floor(span * 1.25); // Inverse of 0.8
+        const diff = newSpan - span;
+        let newLeft = Math.max(0, Math.floor(left - diff / 2));
+        let newRight = Math.min(chartData.length - 1, Math.ceil(right + diff / 2));
+
+        // Adjust if newLeft or newRight go out of bounds
+        if (newRight - newLeft < newSpan) { // If span was reduced due to boundary
+            if (newLeft === 0) newRight = Math.min(chartData.length - 1, newLeft + newSpan);
+            else if (newRight === chartData.length - 1) newLeft = Math.max(0, newRight - newSpan);
+        }
+        setZoomState({ left: newLeft, right: newRight });
+    };
+
+    const handlePan = (direction: 'left' | 'right') => {
+        const { left, right } = zoomState;
+        const span = right - left;
+        const shift = Math.max(1, Math.floor(span * 0.2)); // Shift by 20% of view, minimum 1
+
+        if (direction === 'left') {
+            const newLeft = Math.max(0, left - shift);
+            const newRight = newLeft + span;
+            setZoomState({ left: newLeft, right: Math.min(chartData.length - 1, newRight) });
+        } else {
+            const newRight = Math.min(chartData.length - 1, right + shift);
+            const newLeft = newRight - span;
+            setZoomState({ left: Math.max(0, newLeft), right: newRight });
+        }
+    };
+
+    const handleResetZoom = () => {
+        setZoomState({ left: 0, right: chartData.length - 1 });
+    }
+
+
     return (
         <div className={`bg-slate-900 border border-slate-800 rounded-xl shadow-lg flex flex-col ${isExpanded ? 'h-full border-none shadow-none bg-transparent' : 'h-[300px] p-4'}`}>
             <div className="flex items-center justify-between mb-4 px-1">
-                <h3 className={`font-medium text-slate-200 truncate pr-4 ${isExpanded ? 'text-xl md:text-2xl' : 'text-sm'}`} title={title}>
-                    {title}
-                </h3>
+                {/* Title and Controls */}
+                <div className="flex items-center gap-4">
+                    <h3 className={`font-medium text-slate-200 truncate pr-4 ${isExpanded ? 'text-xl md:text-2xl' : 'text-sm'}`} title={title}>
+                        {title}
+                    </h3>
+
+                    {/* Zoom Controls (Visible only when Expanded) */}
+                    {isExpanded && (
+                        <div className="flex items-center gap-1 bg-slate-800 rounded-lg p-1 border border-slate-700">
+                            <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Zoom In"><ZoomIn className="w-4 h-4" /></button>
+                            <button onClick={handleZoomOut} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Zoom Out"><ZoomOut className="w-4 h-4" /></button>
+                            <div className="w-px h-4 bg-slate-700 mx-1" />
+                            <button onClick={() => handlePan('left')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Pan Left"><ArrowLeft className="w-4 h-4" /></button>
+                            <button onClick={() => handlePan('right')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Pan Right"><ArrowRight className="w-4 h-4" /></button>
+                            <div className="w-px h-4 bg-slate-700 mx-1" />
+                            <button onClick={handleResetZoom} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Reset Scale"><RotateCcw className="w-4 h-4" /></button>
+                        </div>
+                    )}
+                </div>
+
                 {!isExpanded && (
                     <button
                         onClick={onExpand}
@@ -273,7 +355,10 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                                     isRatio ? "Ratio" : "Percentage"
                                 ];
                             }}
-                            labelFormatter={(label) => new Date(label).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}
+                            labelFormatter={(label) => {
+                                if (!label) return '';
+                                return new Date(label).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
+                            }}
                         />
                         <Line
                             type="monotone"
@@ -289,6 +374,25 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
 
                         {metric === "Net New Highs" && <ReferenceLine y={0} stroke="#374151" />}
                         {metric === "Advance/Decline Ratio" && <ReferenceLine y={1} stroke="#374151" />}
+
+                        {/* Interactive Brush Control for Expanded View */}
+                        {isExpanded && (
+                            <Brush
+                                dataKey="Date"
+                                height={30}
+                                stroke="#475569"
+                                fill="#0f172a"
+                                tickFormatter={() => ""}
+                                startIndex={zoomState.left}
+                                endIndex={zoomState.right}
+                                onChange={(range: any) => {
+                                    if (range && range.startIndex !== undefined && range.endIndex !== undefined) {
+                                        setZoomState({ left: range.startIndex, right: range.endIndex });
+                                    }
+                                }}
+                            />
+                        )}
+
                     </LineChart>
                 </ResponsiveContainer>
             </div>
