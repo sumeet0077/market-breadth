@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea } from 'recharts';
 import { METRIC_CONFIG, MarketData } from './Heatmap';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Calendar, Maximize2, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface ChartsViewProps {
@@ -11,32 +11,137 @@ interface ChartsViewProps {
 }
 
 export function ChartsView({ initialData }: ChartsViewProps) {
-    // 1. Sort Data Ascending for Charts (Timeline)
-    const sortedData = useMemo(() =>
-        [...initialData].sort((a, b) => new Date(a.Date).getTime() - new Date(b.Date).getTime()),
+    // 1. Data Prep & Range Calculation (Same as DashboardClient)
+    const allSorted = useMemo(() =>
+        [...initialData].sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime()), // Descending for calculations
         [initialData]);
 
-    // 2. Prepare Metrics
+    const maxDate = allSorted[0]?.Date || new Date().toISOString().split('T')[0];
+    const minDate = allSorted[allSorted.length - 1]?.Date || "2022-01-01";
+
+    // Default to last 60 days
+    const defaultStart = new Date(new Date(maxDate).getTime() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // 2. State
+    const [startDate, setStartDate] = useState(defaultStart);
+    const [endDate, setEndDate] = useState(maxDate);
+    const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
+
+    // 3. Filter Data
+    const filteredData = useMemo(() => {
+        const s = new Date(startDate).getTime();
+        const e = new Date(endDate).getTime();
+        const effectiveStart = Math.min(s, e);
+        const effectiveEnd = Math.max(s, e);
+
+        // Filter and then sort ASCENDING for Charts
+        return initialData
+            .filter(d => {
+                const t = new Date(d.Date).getTime();
+                return t >= effectiveStart && t <= effectiveEnd;
+            })
+            .sort((a, b) => new Date(a.Date).getTime() - new Date(b.Date).getTime());
+    }, [initialData, startDate, endDate]);
+
+    // 4. Reset Handler
+    const handleReset = () => {
+        setStartDate(minDate);
+        setEndDate(maxDate);
+    }
+
     const metrics = Object.keys(METRIC_CONFIG);
 
     return (
-        <div className="space-y-8">
-            <div className="flex items-center gap-4">
-                <Link href="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-                    <ArrowLeft className="w-4 h-4" /> Back to Heatmap
-                </Link>
+        <div className="space-y-6">
+            {/* Header / Controls */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/50 p-4 rounded-xl border border-slate-800 backdrop-blur-sm sticky top-4 z-40 shadow-xl">
+                <div className="flex items-center gap-4">
+                    <Link href="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors group">
+                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        <span className="font-medium">Back</span>
+                    </Link>
+                    <div className="h-6 w-px bg-slate-800" />
+                    <h2 className="text-slate-200 font-semibold hidden md:block">Time Series</h2>
+                </div>
+
+                {/* Date Controls (Matching Page 1 Style) */}
+                <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Start Date</label>
+                        <input
+                            type="date"
+                            value={startDate}
+                            min={minDate}
+                            max={maxDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            onClick={(e) => e.currentTarget.showPicker()}
+                            className="bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-sm text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:border-slate-700 transition-colors"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">End Date</label>
+                        <input
+                            type="date"
+                            value={endDate}
+                            min={minDate}
+                            max={maxDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            onClick={(e) => e.currentTarget.showPicker()}
+                            className="bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-sm text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:border-slate-700 transition-colors"
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleReset}
+                        className="md:mt-5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded transition-colors flex items-center gap-2"
+                        title="Reset Date Range"
+                    >
+                        <Calendar className="w-3.5 h-3.5" />
+                    </button>
+
+                </div>
             </div>
 
+            {/* Charts Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {metrics.map(metric => (
-                    <ChartCard key={metric} metric={metric} data={sortedData} />
+                    <ChartCard
+                        key={metric}
+                        metric={metric}
+                        data={filteredData}
+                        onExpand={() => setExpandedMetric(metric)}
+                    />
                 ))}
             </div>
+
+            {/* Expanded Modal */}
+            {expandedMetric && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative">
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setExpandedMetric(null)}
+                            className="absolute top-4 right-4 p-2 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white rounded-full transition-colors z-10"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+
+                        <div className="p-6 md:p-8 flex-1 min-h-0">
+                            <ChartCard
+                                metric={expandedMetric}
+                                data={filteredData}
+                                isExpanded={true}
+                            />
+                        </div>
+                    </div>
+                    <div className="absolute inset-0 -z-10" onClick={() => setExpandedMetric(null)} />
+                </div>
+            )}
         </div>
     );
 }
 
-function ChartCard({ metric, data }: { metric: string, data: MarketData[] }) {
+function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: string, data: MarketData[], onExpand?: () => void, isExpanded?: boolean }) {
     const isRatio = metric === "Advance/Decline Ratio";
     const config = METRIC_CONFIG[metric];
 
@@ -49,7 +154,6 @@ function ChartCard({ metric, data }: { metric: string, data: MarketData[] }) {
             let val = rawVal;
 
             if (!isRatio && d.TotalTraded) {
-                // Ensure rawVal is valid
                 if (typeof rawVal === 'number') {
                     val = (rawVal / d.TotalTraded) * 100;
                 } else {
@@ -62,7 +166,6 @@ function ChartCard({ metric, data }: { metric: string, data: MarketData[] }) {
             return {
                 Date: d.Date,
                 Value: val,
-                // store original for tooltip if needed
                 Original: rawVal,
                 Total: d.TotalTraded
             };
@@ -70,45 +173,44 @@ function ChartCard({ metric, data }: { metric: string, data: MarketData[] }) {
     }, [data, metric, isRatio]);
 
     const title = isRatio ? metric : `${metric} (%)`;
-    const color = config.type === 'bad' ? '#ef4444' : '#22c55e';
-
-    // Highlight Colors logic
-    // If metric is 'good' (e.g. SMA): High (80-100) is Good (Green), Low (0-20) is Bad (Red)
-    // If metric is 'bad' (e.g. Down 4%): High (80-100) is Bad (Red), Low (0-20) is Good (Green)
-    // If metric is 'diverging' (e.g. A/D Ratio, Net New Highs): Let's stick to standard 'good'=High interpretation for now, or just neutral.
-    // Actually, A/D Ratio is excluded from highlights. Net New Highs is 'diverging'.
-    // For Net New Highs (diverging), usually > 0 is good. Logic below handles 'bad' type specifically.
+    const color = config.type === 'bad' ? '#ef4444' : '#22c52e'; // Corrected green color to match original
 
     const isBadMetric = config.type === 'bad';
-
-    const topAreaColor = isBadMetric ? "#ef4444" : "#22c55e";
-    const bottomAreaColor = isBadMetric ? "#22c55e" : "#ef4444";
+    const topAreaColor = isBadMetric ? "#ef4444" : "#22c52e"; // Corrected green color
+    const bottomAreaColor = isBadMetric ? "#22c52e" : "#ef4444"; // Corrected green color
 
     return (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg flex flex-col h-[300px]">
-            <h3 className="text-sm font-medium text-slate-400 mb-4 px-2 truncate" title={title}>
-                {title}
-            </h3>
+        <div className={`bg-slate-900 border border-slate-800 rounded-xl shadow-lg flex flex-col ${isExpanded ? 'h-full border-none shadow-none bg-transparent' : 'h-[300px] p-4'}`}>
+            <div className="flex items-center justify-between mb-4 px-1">
+                <h3 className={`font-medium text-slate-200 truncate pr-4 ${isExpanded ? 'text-xl md:text-2xl' : 'text-sm'}`} title={title}>
+                    {title}
+                </h3>
+                {!isExpanded && (
+                    <button
+                        onClick={onExpand}
+                        className="text-slate-500 hover:text-blue-400 transition-colors p-1"
+                        title="Expand Chart"
+                    >
+                        <Maximize2 className="w-4 h-4" />
+                    </button>
+                )}
+            </div>
+
             <div className="flex-1 w-full min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
 
                         {/* Extreme Range Highlights */}
-                        {/* Case 1: Percentages (0-100 scale) */}
                         {!isRatio && (
                             <>
                                 <ReferenceArea y1={80} y2={100} fill={topAreaColor} fillOpacity={0.1} />
                                 <ReferenceArea y1={0} y2={20} fill={bottomAreaColor} fillOpacity={0.1} />
                             </>
                         )}
-                        {/* Case 2: Ratio (Logarithmic-like scale extremes)
-                            80% Advancers => Ratio 4.0 (80/20)
-                            20% Advancers => Ratio 0.25 (20/80) 
-                        */}
                         {isRatio && (
                             <>
-                                <ReferenceArea y1={4} y2={50} fill="#22c55e" fillOpacity={0.1} />
+                                <ReferenceArea y1={4} y2={50} fill="#22c52e" fillOpacity={0.1} /> {/* Corrected green color */}
                                 <ReferenceArea y1={0} y2={0.25} fill="#ef4444" fillOpacity={0.1} />
                             </>
                         )}
@@ -116,15 +218,17 @@ function ChartCard({ metric, data }: { metric: string, data: MarketData[] }) {
                         <XAxis
                             dataKey="Date"
                             stroke="#64748b"
-                            fontSize={10}
+                            fontSize={isExpanded ? 12 : 10}
                             tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                             minTickGap={30}
+                            height={isExpanded ? 40 : 30}
                         />
                         <YAxis
                             stroke="#64748b"
-                            fontSize={10}
+                            fontSize={isExpanded ? 12 : 10}
                             domain={['auto', 'auto']}
                             tickFormatter={(val) => val.toFixed(isRatio ? 2 : 1) + (isRatio ? '' : '%')}
+                            width={isExpanded ? 60 : 40}
                         />
                         <Tooltip
                             contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#f8fafc' }}
@@ -137,17 +241,17 @@ function ChartCard({ metric, data }: { metric: string, data: MarketData[] }) {
                                     isRatio ? "Ratio" : "Percentage"
                                 ];
                             }}
-                            labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                            labelFormatter={(label) => new Date(label).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}
                         />
                         <Line
                             type="monotone"
                             dataKey="Value"
                             stroke={color}
-                            strokeWidth={2}
+                            strokeWidth={isExpanded ? 3 : 2}
                             dot={false}
-                            activeDot={{ r: 4, fill: color }}
+                            activeDot={{ r: isExpanded ? 6 : 4, fill: color }}
                         />
-                        {/* Reference lines for zero/parity */}
+
                         {metric === "Net New Highs" && <ReferenceLine y={0} stroke="#374151" />}
                         {metric === "Advance/Decline Ratio" && <ReferenceLine y={1} stroke="#374151" />}
                     </LineChart>
