@@ -20,12 +20,14 @@ export type MarketData = {
     "Advance/Decline Ratio": number;
     "Net New Highs": number;
     "Net New 52-Week Highs as % of Total Stocks": number;
+    TotalTraded: number;
     [key: string]: any;
 };
 
 interface HeatmapProps {
     initialData: MarketData[];
     visibleColumns?: string[];
+    showPercentages?: boolean;
 }
 
 export const METRIC_CONFIG: Record<string, { type: 'good' | 'bad' | 'diverging'; format: 'int' | 'float' | 'pct' }> = {
@@ -44,7 +46,7 @@ export const METRIC_CONFIG: Record<string, { type: 'good' | 'bad' | 'diverging';
     "Net New 52-Week Highs as % of Total Stocks": { type: 'diverging', format: 'pct' },
 };
 
-export function Heatmap({ initialData, visibleColumns }: HeatmapProps) {
+export function Heatmap({ initialData, visibleColumns, showPercentages = false }: HeatmapProps) {
     const columnsToShow = visibleColumns || Object.keys(METRIC_CONFIG);
     // Sort State
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'Date', direction: 'desc' });
@@ -149,9 +151,20 @@ export function Heatmap({ initialData, visibleColumns }: HeatmapProps) {
                                 const bg = scales[key] ? scales[key](val) : "transparent";
 
                                 let displayVal = val.toString();
-                                if (conf.format === 'float') displayVal = val.toFixed(2);
-                                if (conf.format === 'pct') displayVal = `${val.toFixed(1)}%`;
-                                if (conf.format === 'int') displayVal = Math.round(val).toLocaleString();
+
+                                // Logic: If converted to %, do (val / TotalTraded * 100).
+                                // Applies if showPercentages is ON + format is 'int'.
+                                // Exception: "Net New Highs"? User didn't explicitly exclude it, only Ratio and NetNew52W%.
+                                // But Net New Highs (absolute) might be weird as %. Let's assume yes.
+
+                                if (showPercentages && conf.format === 'int' && row.TotalTraded) {
+                                    const pct = (val / row.TotalTraded) * 100;
+                                    displayVal = `${pct.toFixed(1)}%`;
+                                } else {
+                                    if (conf.format === 'float') displayVal = val.toFixed(2);
+                                    if (conf.format === 'pct') displayVal = `${val.toFixed(1)}%`;
+                                    if (conf.format === 'int') displayVal = Math.round(val).toLocaleString();
+                                }
 
                                 return (
                                     <td

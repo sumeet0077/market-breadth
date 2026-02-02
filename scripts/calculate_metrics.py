@@ -124,7 +124,8 @@ def calculate_breadth_aggregates(df):
         "No of stocks which are negative",
         "Advance/Decline Ratio",
         "Net New Highs",
-        "Net New 52-Week Highs as % of Total Stocks"
+        "Net New 52-Week Highs as % of Total Stocks",
+        "TotalTraded"
     ]
     
     # Filter for display (User wants to see 2022 onwards only)

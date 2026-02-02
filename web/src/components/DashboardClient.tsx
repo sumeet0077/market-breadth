@@ -25,6 +25,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     // Column Visibility State
     const allMetrics = Object.keys(METRIC_CONFIG);
     const [selectedMetrics, setSelectedMetrics] = useState<string[]>(allMetrics);
+    const [showPercentages, setShowPercentages] = useState(false);
     const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
 
     // Reset Handler
@@ -106,7 +107,15 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                     </button>
 
                     {/* Column Toggle Dropdown */}
-                    <div className="relative mt-5">
+                    <div className="relative mt-5 flex gap-3">
+                        {/* Percentage Toggle */}
+                        <button
+                            onClick={() => setShowPercentages(!showPercentages)}
+                            className={`px-4 py-2 border border-slate-700 text-sm font-medium rounded transition-colors flex items-center gap-2 ${showPercentages ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                        >
+                            % View
+                        </button>
+
                         <button
                             onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
                             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded transition-colors flex items-center gap-2"
@@ -149,7 +158,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                     <KpiCard
                         label="Stocks > 200 SMA"
                         value={`${kpiAbove200Pct.toFixed(1)}%`}
-                        subValue={`(${latestView["No of stocks above 200 day SMA"]} / ${latestView["TotalTraded"]})`}
+                        subValue={`(${latestView["No of stocks above 200 day SMA"]} / ${latestView["TotalTraded"] || '?'})`}
                         delta={(kpiAbove200Pct - kpiAbove200PctPrev).toFixed(1) + "%"}
                         isGood={true}
                     />
@@ -174,7 +183,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
             {/* Main Heatmap */}
             <section className="space-y-4">
-                <Heatmap initialData={filteredData} visibleColumns={selectedMetrics} />
+                <Heatmap initialData={filteredData} visibleColumns={selectedMetrics} showPercentages={showPercentages} />
             </section>
         </div>
     );
