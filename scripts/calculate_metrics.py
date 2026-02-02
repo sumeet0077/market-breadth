@@ -101,12 +101,7 @@ def calculate_breadth_aggregates(df):
     # Post-aggregation metrics
     daily_stats = daily_stats.with_columns([
         (pl.col("No of stocks which are positive") / pl.col("No of stocks which are negative")).alias("Advance/Decline Ratio"),
-        (pl.col("New52W_Highs").cast(pl.Int64) - pl.col("New52W_Lows").cast(pl.Int64)).alias("Net New Highs"),
-        ((pl.col("No of stocks above 200 day SMA") / pl.col("TotalTraded")) * 100).alias("% Stocks > 200 SMA")
-    ])
-
-    daily_stats = daily_stats.with_columns([
-        ((pl.col("Net New Highs") / pl.col("TotalTraded")) * 100).alias("Net New 52-Week Highs as % of Total Stocks")
+        (pl.col("New52W_Highs").cast(pl.Int64) - pl.col("New52W_Lows").cast(pl.Int64)).alias("Net New Highs")
     ])
     
     # Select and Reorder columns precisely
@@ -117,14 +112,12 @@ def calculate_breadth_aggregates(df):
         "No. of stocks up 20%+ in 5 days",
         "No. of stocks down 20%+ in 5 days",
         "No of stocks above 200 day SMA",
-        "% Stocks > 200 SMA",
         "No of stocks above 50 day SMA",
         "No of stocks above 20 day SMA",
         "No of stocks which are positive",
         "No of stocks which are negative",
         "Advance/Decline Ratio",
         "Net New Highs",
-        "Net New 52-Week Highs as % of Total Stocks",
         "TotalTraded"
     ]
     

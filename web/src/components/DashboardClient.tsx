@@ -62,10 +62,10 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     const latestView = sortedFiltered[0];
     const prevView = sortedFiltered[1] || latestView;
 
-    // KPI Calculations (Using new schema keys)
+    // KPI Calculations
     // "No of stocks above 200 day simple moving average" -> "No of stocks above 200 day SMA"
-    const kpiAbove200Pct = latestView ? (latestView["% Stocks > 200 SMA"] || 0) : 0;
-    const kpiAbove200PctPrev = prevView ? (prevView["% Stocks > 200 SMA"] || 0) : 0;
+    const kpiAbove200Pct = latestView && latestView.TotalTraded ? (latestView["No of stocks above 200 day SMA"] / latestView.TotalTraded) * 100 : 0;
+    const kpiAbove200PctPrev = prevView && prevView.TotalTraded ? (prevView["No of stocks above 200 day SMA"] / prevView.TotalTraded) * 100 : 0;
 
 
     return (
@@ -174,9 +174,10 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                     {/* 3. Net New 52W Highs % */}
                     <KpiCard
                         label="Net New Highs (as %)"
-                        value={`${latestView["Net New 52-Week Highs as % of Total Stocks"].toFixed(2)}%`}
-                        delta={(latestView["Net New 52-Week Highs as % of Total Stocks"] - prevView["Net New 52-Week Highs as % of Total Stocks"]).toFixed(2) + "%"}
-                        isGood={latestView["Net New 52-Week Highs as % of Total Stocks"] > 0}
+                        value={latestView && latestView.TotalTraded ? `${((latestView["Net New Highs"] / latestView.TotalTraded) * 100).toFixed(2)}%` : "0%"}
+                        delta={((latestView && latestView.TotalTraded ? (latestView["Net New Highs"] / latestView.TotalTraded) * 100 : 0) -
+                            (prevView && prevView.TotalTraded ? (prevView["Net New Highs"] / prevView.TotalTraded) * 100 : 0)).toFixed(2) + "%"}
+                        isGood={latestView["Net New Highs"] > 0}
                     />
                 </section>
             )}
