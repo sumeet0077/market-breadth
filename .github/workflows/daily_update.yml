@@ -2,8 +2,8 @@ name: Daily Data Update
 
 on:
   schedule:
-    # Run at 19:00 IST (13:30 UTC) every day (safer buffer for NSE delays)
-    - cron: '30 13 * * *'
+    # Run at 20:00 IST (14:30 UTC) to ensure data is definitely available on NSE
+    - cron: '30 14 * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
