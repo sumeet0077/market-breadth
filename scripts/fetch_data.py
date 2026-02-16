@@ -7,9 +7,16 @@ import random
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # Configuration
-START_DATE = datetime(2021, 1, 1) # Warm-up for 52-week highs
+LOOKBACK_DAYS = os.getenv("LOOKBACK_DAYS")
+if LOOKBACK_DAYS:
+    START_DATE = datetime.now() - timedelta(days=int(LOOKBACK_DAYS))
+    print(f"Incremental Mode: Fetching last {LOOKBACK_DAYS} days (Start: {START_DATE.date()})")
+else:
+    START_DATE = datetime.now() - timedelta(days=365*4) # Full rebuild fallback (4 years)
+    print(f"Full Rebuild Mode: Fetching history from {START_DATE.date()}")
+
 END_DATE = datetime.now()
-DATA_DIR = "data/raw_bhavcopies"
+DATA_DIR = os.getenv("DATA_DIR", "data/raw_bhavcopies")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 

@@ -25,7 +25,17 @@ jobs:
         run: |
           pip install -r requirements.txt
 
+      - name: Cache Raw Data
+        uses: actions/cache@v3
+        with:
+          path: data/raw_bhavcopies
+          key: ${{ runner.os }}-raw-data-${{ hashFiles('scripts/fetch_data.py') }}
+          restore-keys: |
+            ${{ runner.os }}-raw-data-
+
       - name: Run Data Pipeline
+        env:
+          LOOKBACK_DAYS: 30
         run: |
           # 1. Fetch Data
           python scripts/fetch_data.py
