@@ -1,8 +1,9 @@
 import polars as pl
+import duckdb
 import os
 from datetime import datetime
 
-INPUT_FILE = "data/master_bhavcopy.parquet"
+INPUT_FILE = "data/parquet/master_copy.parquet"
 OUTPUT_FILE = "data/market_breadth_metrics.parquet"
 
 def calculate_stock_indicators(df):
@@ -12,6 +13,29 @@ def calculate_stock_indicators(df):
     """
     print("Calculating rolling indicators (SMAs, Returns)...")
     
+    # Schema Mapping: Master Parquet (lowercase) -> Metrics Logic (TitleCase)
+    # Master: symbol, series, trade_date, open, high, low, close, ...
+    
+    # Rename columns if needed
+    # We construct a map of what exists
+    rename_map = {
+        "symbol": "Symbol",
+        "trade_date": "Date",
+        "open": "Open",
+        "high": "High",
+        "low": "Low",
+        "close": "Close",
+        "prev_close": "PrevClose",
+        "volume": "Volume"
+    }
+    
+    valid_renames = {k: v for k, v in rename_map.items() if k in df.columns}
+    if valid_renames:
+        df = df.rename(valid_renames)
+    
+    # Ensure Date is Date type (it might be timestamp in master)
+    df = df.with_columns(pl.col("Date").cast(pl.Date))
+
     # Sort just in case
     df = df.sort(["Symbol", "Date"])
     
@@ -127,11 +151,24 @@ def calculate_breadth_aggregates(df):
     return daily_stats.select(final_cols).sort("Date")
 
 def main():
+    # Input is a directory (Partitioned Parquet)
+    # DuckDB handles partitioned reads and schema merging natively
+    input_path = os.path.join(INPUT_FILE, "**/*.parquet")
+    
     if not os.path.exists(INPUT_FILE):
-        print(f"Input {INPUT_FILE} not found. Run process_data.py first.")
+         print(f"Input directory {INPUT_FILE} not found. Run ingest_daily.py first.")
+         return
+
+    print(f"Reading from {input_path} using DuckDB...")
+    
+    try:
+        # Use DuckDB read_parquet with union_by_name to handle schema evolution
+        # This handles the UInt32 vs UInt64 mismatch automatically
+        df = duckdb.sql(f"SELECT * FROM read_parquet('{input_path}', union_by_name=true)").pl()
+    except Exception as e:
+        print(f"Failed to read parquet with DuckDB: {e}")
         return
 
-    df = pl.read_parquet(INPUT_FILE)
     print(f"Loaded {len(df)} rows.")
     
     # 1. Calc Indicators

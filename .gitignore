@@ -10,6 +10,9 @@ data/raw_bhavcopies/
 data/*.parquet
 data/*.csv
 data/master_bhavcopy.parquet
+# Allow master copy to be tracked (partitioned parquet folder)
+!data/parquet/
+!data/parquet/master_copy.parquet
 # Keep the processed JSON for the dashboard
 !data/market_breadth.json
 

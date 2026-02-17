@@ -13,19 +13,23 @@ os.makedirs(DATA_DIR, exist_ok=True)
 # Smart History Check
 # Count existing CSV files to see if we have enough history for 200-day SMA + Buffer
 existing_files_count = len([name for name in os.listdir(DATA_DIR) if name.endswith(".csv")])
-MIN_HISTORY_FILES = 400 # ~1.5 years of data (safe buffer for 200 SMA + 52-week Highs)
+MIN_HISTORY_FILES = 400 # ~1.5 years of data
 
 LOOKBACK_DAYS = os.getenv("LOOKBACK_DAYS")
 
-if existing_files_count < MIN_HISTORY_FILES:
+if LOOKBACK_DAYS:
+    try:
+        days = int(LOOKBACK_DAYS)
+        START_DATE = datetime.now() - timedelta(days=days)
+        print(f"Incremental Mode: Fetching last {days} days (Start: {START_DATE.date()})")
+    except ValueError:
+        print("Invalid LOOKBACK_DAYS, defaulting to full rebuild check.")
+        START_DATE = datetime(2021, 1, 1)
+elif existing_files_count < MIN_HISTORY_FILES:
     print(f"⚠️ Insufficient history detected ({existing_files_count} files). Forcing Full Rebuild...")
-    # Force full history if we don't have enough data (e.g., Cache Miss)
     START_DATE = datetime(2021, 1, 1) 
-elif LOOKBACK_DAYS:
-    START_DATE = datetime.now() - timedelta(days=int(LOOKBACK_DAYS))
-    print(f"Incremental Mode: Fetching last {LOOKBACK_DAYS} days (Start: {START_DATE.date()})")
 else:
-    START_DATE = datetime.now() - timedelta(days=365*4) # Full rebuild fallback (4 years)
+    START_DATE = datetime.now() - timedelta(days=365*4) # Full rebuild fallback
     print(f"Full Rebuild Mode: Fetching history from {START_DATE.date()}")
 
 END_DATE = datetime.now()

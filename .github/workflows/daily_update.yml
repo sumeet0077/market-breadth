@@ -37,11 +37,13 @@ jobs:
         env:
           LOOKBACK_DAYS: 30
         run: |
-          # 1. Fetch Data
+          # 1. Fetch Data (Incremental)
           python scripts/fetch_data.py
-          # 2. Process Data
-          python scripts/process_data.py
-          # 3. Calculate Metrics
+          
+          # 2. Ingest to DuckDB/Parquet (Updates Master Copy)
+          python scripts/ingest_daily.py
+          
+          # 3. Calculate Metrics (Reads from Master Copy)
           python scripts/calculate_metrics.py
           
           # 4. Move JSON to Web Public folder (Crucial for Next.js)
