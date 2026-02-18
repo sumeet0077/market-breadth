@@ -70,6 +70,16 @@ export function Heatmap({ initialData, visibleColumns, showPercentages = false }
                     .domain([0, 1, 1.000001, limit])
                     .range(["#ef4444", "#7f1d1d", "#064e3b", "#22c55e"])
                     .clamp(true);
+            } else if (key === "Net New Highs") {
+                // Custom scale: Hard pivot at 0
+                // <= 0: Red
+                // > 0: Green
+                const effectiveMin = Math.min(min, -1);
+                const effectiveMax = Math.max(max, 1);
+                s[key] = scaleLinear<string>()
+                    .domain([effectiveMin, 0, 0.000001, effectiveMax])
+                    .range(["#ef4444", "#7f1d1d", "#064e3b", "#22c55e"])
+                    .clamp(true);
             } else if (type === 'good') {
                 s[key] = scaleLinear<string>().domain([min, max]).range(["#052e16", "#22c55e"]);
             } else if (type === 'bad') {
