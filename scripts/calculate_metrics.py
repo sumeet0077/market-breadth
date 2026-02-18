@@ -145,8 +145,8 @@ def calculate_breadth_aggregates(df):
         "TotalTraded"
     ]
     
-    # Filter for display (User wants to see 2022 onwards only)
-    daily_stats = daily_stats.filter(pl.col("Date") >= datetime(2022, 1, 1))
+    # Filter for display (User wants to see 2022 onwards only) -> REMOVED per user request
+    # daily_stats = daily_stats.filter(pl.col("Date") >= datetime(2022, 1, 1))
 
     return daily_stats.select(final_cols).sort("Date")
 
