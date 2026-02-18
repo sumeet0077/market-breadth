@@ -375,13 +375,17 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                         {metric === "Net New Highs" && (
                             <>
                                 <ReferenceLine y={0} stroke="#374151" />
-                                {/* 10% Benchmarks (Amber) -> Asymmetric 2020+ Regime */}
-                                <ReferenceLine y={6.5} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: '10%', position: 'right', fill: '#f59e0b', fontSize: 10 }} />
-                                <ReferenceLine y={-3.0} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} />
+                                {/* Amber (Warning): 10% Probability */}
+                                <ReferenceLine y={6.5} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: '+6.5%', position: 'right', fill: '#f59e0b', fontSize: 10 }} />
+                                <ReferenceLine y={-3.0} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: '-3.0%', position: 'right', fill: '#f59e0b', fontSize: 10 }} />
 
-                                {/* 5% Extremes (Red) -> Asymmetric 2020+ Regime */}
-                                <ReferenceLine y={8.0} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: '5%', position: 'right', fill: '#ef4444', fontSize: 10 }} />
-                                <ReferenceLine y={-6.5} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} />
+                                {/* Red (Extreme): 5% Probability */}
+                                <ReferenceLine y={8.0} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: '+8.0%', position: 'right', fill: '#ef4444', fontSize: 10 }} />
+                                <ReferenceLine y={-6.5} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: '-6.5%', position: 'right', fill: '#ef4444', fontSize: 10 }} />
+
+                                {/* Purple (All-In / All-Out): ~1% Probability */}
+                                <ReferenceLine y={10.0} stroke="#a855f7" strokeDasharray="3 3" strokeWidth={2} label={{ value: 'ALL OUT (+10%)', position: 'right', fill: '#a855f7', fontSize: 10, fontWeight: 'bold' }} />
+                                <ReferenceLine y={-12.0} stroke="#a855f7" strokeDasharray="3 3" strokeWidth={2} label={{ value: 'ALL IN (-12%)', position: 'right', fill: '#a855f7', fontSize: 10, fontWeight: 'bold' }} />
                             </>
                         )}
                         {metric === "Advance/Decline Ratio" && <ReferenceLine y={1} stroke="#374151" />}
