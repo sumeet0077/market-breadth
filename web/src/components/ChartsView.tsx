@@ -199,8 +199,8 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     // Gradient ID
     const gradientId = `splitColor-${metric.replace(/\s+/g, '')}`;
 
-    // Banding logic: Show if NOT Ratio AND NOT 4.5% metrics
-    const showBanding = !isRatio && !metric.includes("4.5%");
+    // Banding logic: Show if NOT Ratio AND NOT 4.5% metrics AND NOT 20% metrics AND NOT Net New Highs
+    const showBanding = !isRatio && !metric.includes("4.5%") && !metric.includes("20%+") && metric !== "Net New Highs";
 
     // State for Zoom/Pan
     const [zoomState, setZoomState] = useState<{ left: number, right: number }>({ left: 0, right: 0 });
