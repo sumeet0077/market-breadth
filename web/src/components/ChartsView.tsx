@@ -375,13 +375,13 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                         {metric === "Net New Highs" && (
                             <>
                                 <ReferenceLine y={0} stroke="#374151" />
-                                {/* 10% Benchmarks (Amber) -> +/- 5.5% */}
-                                <ReferenceLine y={5.5} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: '10%', position: 'right', fill: '#f59e0b', fontSize: 10 }} />
-                                <ReferenceLine y={-5.5} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} />
+                                {/* 10% Benchmarks (Amber) -> Asymmetric 2020+ Regime */}
+                                <ReferenceLine y={6.5} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: '10%', position: 'right', fill: '#f59e0b', fontSize: 10 }} />
+                                <ReferenceLine y={-3.0} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} />
 
-                                {/* 5% Extremes (Red) -> +7% / -10% */}
-                                <ReferenceLine y={7} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: '5%', position: 'right', fill: '#ef4444', fontSize: 10 }} />
-                                <ReferenceLine y={-10} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} />
+                                {/* 5% Extremes (Red) -> Asymmetric 2020+ Regime */}
+                                <ReferenceLine y={8.0} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: '5%', position: 'right', fill: '#ef4444', fontSize: 10 }} />
+                                <ReferenceLine y={-6.5} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} />
                             </>
                         )}
                         {metric === "Advance/Decline Ratio" && <ReferenceLine y={1} stroke="#374151" />}
