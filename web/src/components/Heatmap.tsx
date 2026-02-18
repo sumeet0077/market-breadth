@@ -60,7 +60,17 @@ export function Heatmap({ initialData, visibleColumns, showPercentages = false }
             const max = values.length > 0 ? Math.max(...values) : 100;
             const type = METRIC_CONFIG[key].type;
 
-            if (type === 'good') {
+            if (key === "Advance/Decline Ratio") {
+                // Custom scale: Hard pivot at 1
+                // < 1: Red gradient (0 -> 1)
+                // > 1: Green gradient (1 -> Max)
+                // = 1: Red (as requested)
+                const limit = Math.max(max, 2); // distinct range
+                s[key] = scaleLinear<string>()
+                    .domain([0, 1, 1.000001, limit])
+                    .range(["#ef4444", "#7f1d1d", "#064e3b", "#22c55e"])
+                    .clamp(true);
+            } else if (type === 'good') {
                 s[key] = scaleLinear<string>().domain([min, max]).range(["#052e16", "#22c55e"]);
             } else if (type === 'bad') {
                 s[key] = scaleLinear<string>().domain([min, max]).range(["#064e3b", "#ef4444"]);
