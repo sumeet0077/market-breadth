@@ -239,7 +239,7 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
         }
 
         const zoomFactor = direction === 'in' ? 0.75 : 1.33;
-        let newSpan = Math.floor(span * zoomFactor);
+        let newSpan = Math.max(10, Math.floor(span * zoomFactor)); // Enforce minimum span to prevent frozen zoom states
         if (newSpan >= chartData.length) newSpan = chartData.length - 1;
 
         const diff = span - newSpan;
@@ -340,6 +340,13 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     // Mouse Drag (Panning) Handlers
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!isExpanded) return;
+
+        // Prevent pan behavior if clicking the Brush slider
+        const target = e.target as HTMLElement;
+        if (target && typeof target.closest === 'function' && target.closest('.recharts-brush')) {
+            return;
+        }
+
         setIsPanning(true);
         lastPanX.current = e.clientX;
     };
@@ -525,7 +532,17 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 onChange={(range: any) => {
                                     if (!isPanning && range && range.startIndex !== undefined && range.endIndex !== undefined) {
-                                        updateZoomState({ left: range.startIndex, right: range.endIndex });
+                                        let left = range.startIndex;
+                                        let right = range.endIndex;
+                                        // Enforce 10-day minimum to prevent slider from collapsing completely and freezing
+                                        if (right - left < 10) {
+                                            if (left + 10 < chartData.length) right = left + 10;
+                                            else {
+                                                right = chartData.length - 1;
+                                                left = Math.max(0, right - 10);
+                                            }
+                                        }
+                                        updateZoomState({ left: left, right: right });
                                     }
                                 }}
                             />
