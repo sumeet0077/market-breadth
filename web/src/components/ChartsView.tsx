@@ -206,6 +206,7 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     const [zoomState, setZoomState] = useState<{ left: number, right: number }>({ left: 0, right: 0 });
     const isPanning = useRef(false);
     const lastPanX = useRef(0);
+    const lastMouseX = useRef(0); // Track hover position for pivot zoom
     const wheelTimeout = useRef<NodeJS.Timeout | null>(null);
     const chartContainerRef = useRef<HTMLDivElement>(null);
 
@@ -216,43 +217,62 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
         }
     }, [chartData.length]);
 
-    // Functional State Handlers
-    const handleZoomIn = () => {
+    // Pivot-based Zoom Logic
+    const handleZoom = (direction: 'in' | 'out', mouseX?: number) => {
         setZoomState(prev => {
             const span = prev.right - prev.left;
-            if (span <= 10) return prev; // Max zoom limit
-            const newSpan = Math.floor(span * 0.75); // 25% zoom
+            if (direction === 'in' && span <= 10) return prev; // Max zoom limit
+            if (direction === 'out' && span >= chartData.length - 1) return { left: 0, right: chartData.length - 1 };
+
+            const zoomFactor = direction === 'in' ? 0.75 : 1.33;
+            let newSpan = Math.floor(span * zoomFactor);
+            if (newSpan >= chartData.length) newSpan = chartData.length - 1;
+
             const diff = span - newSpan;
-            return {
-                left: Math.min(chartData.length - 1, Math.floor(prev.left + diff / 2)),
-                right: Math.max(0, Math.ceil(prev.right - diff / 2))
-            };
-        });
-    };
 
-    const handleZoomOut = () => {
-        setZoomState(prev => {
-            const span = prev.right - prev.left;
-            if (span >= chartData.length - 1) return { left: 0, right: chartData.length - 1 };
+            // Default center if no mouse position provided
+            let focusRatio = 0.5;
 
-            const newSpan = Math.floor(span * 1.33);
-            const diff = newSpan - span;
-            let newLeft = Math.max(0, Math.floor(prev.left - diff / 2));
-            let newRight = Math.min(chartData.length - 1, Math.ceil(prev.right + diff / 2));
+            // Calculate focus ratio based on mouse position within the container bounds
+            if (mouseX !== undefined && chartContainerRef.current) {
+                const rect = chartContainerRef.current.getBoundingClientRect();
+                // Rough estimate accounting for Y-axis width (approx 60px)
+                const chartX = mouseX - rect.left - 60;
+                const chartWidth = rect.width - 60;
 
-            // Adjust boundaries
-            if (newRight - newLeft < newSpan) {
-                if (newLeft === 0) newRight = Math.min(chartData.length - 1, newLeft + newSpan);
-                else if (newRight === chartData.length - 1) newLeft = Math.max(0, newRight - newSpan);
+                if (chartX > 0 && chartX < chartWidth) {
+                    focusRatio = chartX / chartWidth;
+                }
             }
+
+            // Distribute the zoom diff based on the focus ratio
+            const leftDiff = Math.floor(diff * focusRatio);
+            const rightDiff = diff - leftDiff;
+
+            let newLeft = prev.left + leftDiff;
+            let newRight = prev.right - rightDiff;
+
+            // Boundary checks
+            if (newLeft < 0) {
+                newLeft = 0;
+                newRight = Math.min(chartData.length - 1, newLeft + newSpan);
+            } else if (newRight > chartData.length - 1) {
+                newRight = chartData.length - 1;
+                newLeft = Math.max(0, newRight - newSpan);
+            }
+
             return { left: newLeft, right: newRight };
         });
     };
 
+    const handleZoomIn = () => handleZoom('in');
+    const handleZoomOut = () => handleZoom('out');
+
     const handlePan = (direction: 'left' | 'right') => {
         setZoomState(prev => {
             const span = prev.right - prev.left;
-            const shift = Math.max(1, Math.floor(span * 0.2));
+            // Adaptive pan shift based on current zoom level
+            const shift = Math.max(1, Math.floor(span * 0.1)); // 10% smoother panning
             if (direction === 'left') {
                 const newLeft = Math.max(0, prev.left - shift);
                 return { left: newLeft, right: Math.min(chartData.length - 1, newLeft + span) };
@@ -276,17 +296,27 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
             e.preventDefault(); // Stop page scrolling
             if (wheelTimeout.current) return;
 
-            if (e.deltaY < -5) handleZoomIn();
-            else if (e.deltaY > 5) handleZoomOut();
+            if (e.deltaY < -5) handleZoom('in', lastMouseX.current);
+            else if (e.deltaY > 5) handleZoom('out', lastMouseX.current);
 
             wheelTimeout.current = setTimeout(() => {
                 wheelTimeout.current = null;
             }, 30); // smooth 30ms throttle
         };
 
+        // Track hover position for zoom pivot
+        const handleNativeMouseMove = (e: MouseEvent) => {
+            lastMouseX.current = e.clientX;
+        };
+
         // passive: false is REQUIRED to allow preventDefault
         container.addEventListener('wheel', handleNativeWheel, { passive: false });
-        return () => container.removeEventListener('wheel', handleNativeWheel);
+        container.addEventListener('mousemove', handleNativeMouseMove);
+
+        return () => {
+            container.removeEventListener('wheel', handleNativeWheel);
+            container.removeEventListener('mousemove', handleNativeMouseMove);
+        }
     }, [isExpanded, chartData.length]);
 
     // Mouse Drag (Panning) Handlers
@@ -303,13 +333,15 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
 
         setZoomState(prev => {
             const span = prev.right - prev.left;
-            // Adaptive sensitivity based on zoom level
-            const pixelsPerPoint = Math.max(1, Math.floor(800 / span));
+            // Adaptive sensitivity based on zoom level (increase sensitivity for smoother panning)
+            const pixelsPerPoint = Math.max(0.5, 800 / span);
 
             if (Math.abs(deltaX) > pixelsPerPoint) {
-                const shiftCount = Math.floor(Math.abs(deltaX) / (pixelsPerPoint * 0.5));
+                // Finer shift resolution
+                const shiftCount = Math.abs(deltaX) / pixelsPerPoint;
                 const direction = deltaX > 0 ? -1 : 1;
-                const shift = shiftCount * direction;
+                // Accumulate fractional shifts to integer boundaries
+                const shift = Math.max(1, Math.floor(shiftCount)) * direction;
 
                 let newLeft = prev.left + shift;
                 let newRight = prev.right + shift;
@@ -464,6 +496,25 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                             </>
                         )}
                         {metric === "Advance/Decline Ratio" && <ReferenceLine y={1} stroke="#374151" />}
+
+                        {/* Interactive Brush Control for Expanded View */}
+                        {isExpanded && (
+                            <Brush
+                                dataKey="Date"
+                                height={40}
+                                stroke="#475569"
+                                fill="#0f172a"
+                                className="opacity-80"
+                                tickFormatter={() => ""}
+                                startIndex={zoomState.left}
+                                endIndex={zoomState.right}
+                                onChange={(range: any) => {
+                                    if (!isPanning.current && range && range.startIndex !== undefined && range.endIndex !== undefined) {
+                                        setZoomState({ left: range.startIndex, right: range.endIndex });
+                                    }
+                                }}
+                            />
+                        )}
 
                     </LineChart>
                 </ResponsiveContainer>
