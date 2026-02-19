@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from 'react';
 import { scaleLinear } from 'd3-scale';
-import { cn } from '@/lib/utils';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 
 export type MarketData = {
@@ -19,6 +18,7 @@ export type MarketData = {
     "Advance/Decline Ratio": number;
     "Net New Highs": number;
     TotalTraded: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any;
 };
 
@@ -49,6 +49,7 @@ export function Heatmap({ initialData, visibleColumns, showPercentages = false }
 
     // 1. Calculate Min/Max per column for scaling (based on current view)
     const scales = useMemo(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const s: Record<string, any> = {};
         Object.keys(METRIC_CONFIG).forEach((key) => {
             // Filter out nulls/undefined for scale calculation

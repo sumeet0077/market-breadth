@@ -3,11 +3,11 @@
 import React, { useState, useMemo } from 'react';
 import { MarketData, METRIC_CONFIG } from '@/components/Heatmap';
 import { Heatmap } from './Heatmap';
-import { ArrowUp, ArrowDown, Calendar, Search, Settings, Check, LineChart } from 'lucide-react';
+import { Calendar, Settings, Check, LineChart } from 'lucide-react';
 import Link from 'next/link';
 
 interface DashboardClientProps {
-    initialData: any[];
+    initialData: MarketData[];
 }
 
 export function DashboardClient({ initialData }: DashboardClientProps) {
@@ -201,7 +201,10 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
 function KpiCard({ label, value, subValue, delta, isGood }: { label: string, value: string, subValue?: string, delta: string, isGood: boolean }) {
     const deltaNum = parseFloat(delta);
-    const deltaColor = deltaNum > 0 ? "text-green-400" : deltaNum < 0 ? "text-red-400" : "text-slate-500";
+    let deltaColor = "text-slate-500";
+    if (deltaNum > 0) deltaColor = isGood !== false ? "text-green-400" : "text-red-400";
+    else if (deltaNum < 0) deltaColor = isGood !== false ? "text-red-400" : "text-green-400";
+
     const icon = deltaNum > 0 ? "↑" : deltaNum < 0 ? "↓" : "−";
 
     return (
