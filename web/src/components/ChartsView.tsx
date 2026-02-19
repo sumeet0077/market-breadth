@@ -204,9 +204,10 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
 
     // State for Zoom/Pan
     const [zoomState, setZoomState] = useState<{ left: number, right: number }>({ left: 0, right: 0 });
-    const [isPanning, setIsPanning] = useState(false);
-    const [panStartX, setPanStartX] = useState(0);
+    const isPanning = useRef(false);
+    const lastPanX = useRef(0);
     const wheelTimeout = useRef<NodeJS.Timeout | null>(null);
+    const chartContainerRef = useRef<HTMLDivElement>(null);
 
     // Initialize zoom on data load or expand
     useEffect(() => {
@@ -215,114 +216,124 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
         }
     }, [chartData.length]);
 
-    // Handlers
+    // Functional State Handlers
     const handleZoomIn = () => {
-        const { left, right } = zoomState;
-        const span = right - left;
-        if (span <= 5) return; // Prevent zooming too far in
-
-        const newSpan = Math.floor(span * 0.8); // 20% zoom
-        const diff = span - newSpan;
-        const newLeft = Math.min(chartData.length - 1, Math.floor(left + diff / 2));
-        const newRight = Math.max(0, Math.ceil(right - diff / 2));
-        setZoomState({ left: newLeft, right: newRight });
+        setZoomState(prev => {
+            const span = prev.right - prev.left;
+            if (span <= 10) return prev; // Max zoom limit
+            const newSpan = Math.floor(span * 0.75); // 25% zoom
+            const diff = span - newSpan;
+            return {
+                left: Math.min(chartData.length - 1, Math.floor(prev.left + diff / 2)),
+                right: Math.max(0, Math.ceil(prev.right - diff / 2))
+            };
+        });
     };
 
     const handleZoomOut = () => {
-        const { left, right } = zoomState;
-        const span = right - left;
-        if (span >= chartData.length - 1) { // Already at max zoom out
-            setZoomState({ left: 0, right: chartData.length - 1 });
-            return;
-        }
+        setZoomState(prev => {
+            const span = prev.right - prev.left;
+            if (span >= chartData.length - 1) return { left: 0, right: chartData.length - 1 };
 
-        const newSpan = Math.floor(span * 1.25); // Inverse of 0.8
-        const diff = newSpan - span;
-        let newLeft = Math.max(0, Math.floor(left - diff / 2));
-        let newRight = Math.min(chartData.length - 1, Math.ceil(right + diff / 2));
+            const newSpan = Math.floor(span * 1.33);
+            const diff = newSpan - span;
+            let newLeft = Math.max(0, Math.floor(prev.left - diff / 2));
+            let newRight = Math.min(chartData.length - 1, Math.ceil(prev.right + diff / 2));
 
-        // Adjust if newLeft or newRight go out of bounds
-        if (newRight - newLeft < newSpan) { // If span was reduced due to boundary
-            if (newLeft === 0) newRight = Math.min(chartData.length - 1, newLeft + newSpan);
-            else if (newRight === chartData.length - 1) newLeft = Math.max(0, newRight - newSpan);
-        }
-        setZoomState({ left: newLeft, right: newRight });
+            // Adjust boundaries
+            if (newRight - newLeft < newSpan) {
+                if (newLeft === 0) newRight = Math.min(chartData.length - 1, newLeft + newSpan);
+                else if (newRight === chartData.length - 1) newLeft = Math.max(0, newRight - newSpan);
+            }
+            return { left: newLeft, right: newRight };
+        });
     };
 
     const handlePan = (direction: 'left' | 'right') => {
-        const { left, right } = zoomState;
-        const span = right - left;
-        const shift = Math.max(1, Math.floor(span * 0.2)); // Shift by 20% of view, minimum 1
-
-        if (direction === 'left') {
-            const newLeft = Math.max(0, left - shift);
-            const newRight = newLeft + span;
-            setZoomState({ left: newLeft, right: Math.min(chartData.length - 1, newRight) });
-        } else {
-            const newRight = Math.min(chartData.length - 1, right + shift);
-            const newLeft = newRight - span;
-            setZoomState({ left: Math.max(0, newLeft), right: newRight });
-        }
+        setZoomState(prev => {
+            const span = prev.right - prev.left;
+            const shift = Math.max(1, Math.floor(span * 0.2));
+            if (direction === 'left') {
+                const newLeft = Math.max(0, prev.left - shift);
+                return { left: newLeft, right: Math.min(chartData.length - 1, newLeft + span) };
+            } else {
+                const newRight = Math.min(chartData.length - 1, prev.right + shift);
+                return { left: Math.max(0, newRight - span), right: newRight };
+            }
+        });
     };
 
     const handleResetZoom = () => {
         setZoomState({ left: 0, right: chartData.length - 1 });
     }
 
-    // Interactive Handlers (Mouse & Wheel)
-    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-        if (!isExpanded) return;
-        if (wheelTimeout.current) return;
+    // Native Wheel Event to prevent background scrolling
+    useEffect(() => {
+        const container = chartContainerRef.current;
+        if (!container || !isExpanded) return;
 
-        if (e.deltaY < -10) {
-            handleZoomIn();
-        } else if (e.deltaY > 10) {
-            handleZoomOut();
-        }
+        const handleNativeWheel = (e: WheelEvent) => {
+            e.preventDefault(); // Stop page scrolling
+            if (wheelTimeout.current) return;
 
-        wheelTimeout.current = setTimeout(() => {
-            wheelTimeout.current = null;
-        }, 50); // 50ms throttle
-    };
+            if (e.deltaY < -5) handleZoomIn();
+            else if (e.deltaY > 5) handleZoomOut();
 
+            wheelTimeout.current = setTimeout(() => {
+                wheelTimeout.current = null;
+            }, 30); // smooth 30ms throttle
+        };
+
+        // passive: false is REQUIRED to allow preventDefault
+        container.addEventListener('wheel', handleNativeWheel, { passive: false });
+        return () => container.removeEventListener('wheel', handleNativeWheel);
+    }, [isExpanded, chartData.length]);
+
+    // Mouse Drag (Panning) Handlers
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!isExpanded) return;
-        setIsPanning(true);
-        setPanStartX(e.clientX);
+        isPanning.current = true;
+        lastPanX.current = e.clientX;
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!isExpanded || !isPanning) return;
+        if (!isExpanded || !isPanning.current) return;
 
-        const deltaX = e.clientX - panStartX;
-        const span = zoomState.right - zoomState.left;
-        const pixelsPerDataPoint = Math.max(2, Math.floor(800 / span));
+        const deltaX = e.clientX - lastPanX.current;
 
-        if (Math.abs(deltaX) > pixelsPerDataPoint) {
-            const shiftCount = Math.floor(Math.abs(deltaX) / pixelsPerDataPoint);
-            const direction = deltaX > 0 ? -1 : 1;
-            const shift = shiftCount * direction;
+        setZoomState(prev => {
+            const span = prev.right - prev.left;
+            // Adaptive sensitivity based on zoom level
+            const pixelsPerPoint = Math.max(1, Math.floor(800 / span));
 
-            let newLeft = zoomState.left + shift;
-            let newRight = zoomState.right + shift;
+            if (Math.abs(deltaX) > pixelsPerPoint) {
+                const shiftCount = Math.floor(Math.abs(deltaX) / (pixelsPerPoint * 0.5));
+                const direction = deltaX > 0 ? -1 : 1;
+                const shift = shiftCount * direction;
 
-            if (newLeft < 0) {
-                newLeft = 0;
-                newRight = span;
-            } else if (newRight > chartData.length - 1) {
-                newRight = chartData.length - 1;
-                newLeft = newRight - span;
+                let newLeft = prev.left + shift;
+                let newRight = prev.right + shift;
+
+                if (newLeft < 0) {
+                    newLeft = 0;
+                    newRight = span;
+                } else if (newRight > chartData.length - 1) {
+                    newRight = chartData.length - 1;
+                    newLeft = newRight - span;
+                }
+
+                lastPanX.current = e.clientX;
+                return { left: newLeft, right: newRight };
             }
-
-            setZoomState({ left: newLeft, right: newRight });
-            setPanStartX(e.clientX);
-        }
+            return prev;
+        });
     };
 
-    const handleMouseUp = () => setIsPanning(false);
-    const handleMouseLeave = () => setIsPanning(false);
+    const handleMouseUp = () => { isPanning.current = false; };
+    const handleMouseLeave = () => { isPanning.current = false; };
 
-
+    // Explicitly slice data for the chart to force re-render and fix slider lag
+    const visibleData = isExpanded ? chartData.slice(zoomState.left, zoomState.right + 1) : chartData;
 
     return (
         <div className={`bg-slate-900 border border-slate-800 rounded-xl shadow-lg flex flex-col ${isExpanded ? 'h-full border-none shadow-none bg-transparent' : 'h-[300px] p-4'}`}>
@@ -359,15 +370,15 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
             </div>
 
             <div
-                className={`flex-1 w-full min-h-0 ${isExpanded ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
-                onWheel={handleWheel}
+                ref={chartContainerRef}
+                className={`flex-1 w-full min-h-0 ${isExpanded ? (isPanning.current ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseLeave}
             >
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
+                    <LineChart data={visibleData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
 
                         {isDiverging && (
@@ -453,24 +464,6 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                             </>
                         )}
                         {metric === "Advance/Decline Ratio" && <ReferenceLine y={1} stroke="#374151" />}
-
-                        {/* Interactive Brush Control for Expanded View */}
-                        {isExpanded && (
-                            <Brush
-                                dataKey="Date"
-                                height={30}
-                                stroke="#475569"
-                                fill="#0f172a"
-                                tickFormatter={() => ""}
-                                startIndex={zoomState.left}
-                                endIndex={zoomState.right}
-                                onChange={(range: any) => {
-                                    if (range && range.startIndex !== undefined && range.endIndex !== undefined) {
-                                        setZoomState({ left: range.startIndex, right: range.endIndex });
-                                    }
-                                }}
-                            />
-                        )}
 
                     </LineChart>
                 </ResponsiveContainer>
