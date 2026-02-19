@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Brush } from 'recharts';
 import { METRIC_CONFIG, MarketData } from './Heatmap';
 import { ArrowLeft, Calendar, Maximize2, X, ZoomIn, ZoomOut, RotateCcw, ArrowRight } from 'lucide-react';
@@ -204,6 +204,9 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
 
     // State for Zoom/Pan
     const [zoomState, setZoomState] = useState<{ left: number, right: number }>({ left: 0, right: 0 });
+    const [isPanning, setIsPanning] = useState(false);
+    const [panStartX, setPanStartX] = useState(0);
+    const wheelTimeout = useRef<NodeJS.Timeout | null>(null);
 
     // Initialize zoom on data load or expand
     useEffect(() => {
@@ -266,6 +269,60 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
         setZoomState({ left: 0, right: chartData.length - 1 });
     }
 
+    // Interactive Handlers (Mouse & Wheel)
+    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+        if (!isExpanded) return;
+        if (wheelTimeout.current) return;
+
+        if (e.deltaY < -10) {
+            handleZoomIn();
+        } else if (e.deltaY > 10) {
+            handleZoomOut();
+        }
+
+        wheelTimeout.current = setTimeout(() => {
+            wheelTimeout.current = null;
+        }, 50); // 50ms throttle
+    };
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!isExpanded) return;
+        setIsPanning(true);
+        setPanStartX(e.clientX);
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!isExpanded || !isPanning) return;
+
+        const deltaX = e.clientX - panStartX;
+        const span = zoomState.right - zoomState.left;
+        const pixelsPerDataPoint = Math.max(2, Math.floor(800 / span));
+
+        if (Math.abs(deltaX) > pixelsPerDataPoint) {
+            const shiftCount = Math.floor(Math.abs(deltaX) / pixelsPerDataPoint);
+            const direction = deltaX > 0 ? -1 : 1;
+            const shift = shiftCount * direction;
+
+            let newLeft = zoomState.left + shift;
+            let newRight = zoomState.right + shift;
+
+            if (newLeft < 0) {
+                newLeft = 0;
+                newRight = span;
+            } else if (newRight > chartData.length - 1) {
+                newRight = chartData.length - 1;
+                newLeft = newRight - span;
+            }
+
+            setZoomState({ left: newLeft, right: newRight });
+            setPanStartX(e.clientX);
+        }
+    };
+
+    const handleMouseUp = () => setIsPanning(false);
+    const handleMouseLeave = () => setIsPanning(false);
+
+
 
     return (
         <div className={`bg-slate-900 border border-slate-800 rounded-xl shadow-lg flex flex-col ${isExpanded ? 'h-full border-none shadow-none bg-transparent' : 'h-[300px] p-4'}`}>
@@ -301,7 +358,14 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                 )}
             </div>
 
-            <div className="flex-1 w-full min-h-0">
+            <div
+                className={`flex-1 w-full min-h-0 ${isExpanded ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
+            >
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
