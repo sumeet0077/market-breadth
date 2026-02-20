@@ -170,7 +170,9 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                 Original: rawVal,
                 Total: d.TotalTraded,
                 BuySignal: d.Bullseye_Buy_Signal,
-                SellSignal: d.Bullseye_Sell_Signal
+                SellSignal: d.Bullseye_Sell_Signal,
+                BuyProb: d.Buy_Reversal_Prob,
+                SellProb: d.Sell_Reversal_Prob
             };
         });
     }, [data, metric, isRatio]);
@@ -481,10 +483,12 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                                 const val = Number(value);
                                 const isBuy = props.payload?.BuySignal;
                                 const isSell = props.payload?.SellSignal;
+                                const buyProb = props.payload?.BuyProb;
+                                const sellProb = props.payload?.SellProb;
 
                                 let label = (isNaN(val) ? value : val.toFixed(2)) + (isRatio ? '' : '%');
-                                if (isBuy) label += " 🟢 B_BUY";
-                                if (isSell) label += " 🔴 B_SELL";
+                                if (isBuy) label += ` 🟢 B_BUY (${buyProb?.toFixed(1) || '99.0'}% Prob)`;
+                                if (isSell) label += ` 🔴 B_SELL (${sellProb?.toFixed(1) || '99.0'}% Prob)`;
 
                                 return [
                                     label,

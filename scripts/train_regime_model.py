@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from hmmlearn import hmm
+from scipy.stats import norm
 
 DATA_DIR = "data"
 JSON_FILE = os.path.join(DATA_DIR, "market_breadth.json")
@@ -145,6 +146,15 @@ def generate_bullseye_signals(df):
     
     df['Bullseye_Buy_Signal'] = buy_condition
     df['Bullseye_Sell_Signal'] = sell_condition
+    
+    # Calculate Statistical Probability of Reversal based on Mean Reversion (Z-Score to CDF)
+    # 1. stretch_prob: How extremely stretched is the market mathematically? (e.g., Z=2 -> 97.7%)
+    stretch_prob = norm.cdf(df['OU_Stretch_Pct50D'].abs())
+    
+    # 2. Combined Reversal Probability (Context * Stretch Severity)
+    # Scales the stretch probability by the confidence we are actually in the corrective regime
+    df['Buy_Reversal_Prob'] = (df['Prob_Bear_Regime'] * stretch_prob * 100).clip(upper=99.9).round(1)
+    df['Sell_Reversal_Prob'] = (df['Prob_Bull_Regime'] * stretch_prob * 100).clip(upper=99.9).round(1)
     
     return df
 
