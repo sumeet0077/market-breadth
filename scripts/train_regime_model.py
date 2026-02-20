@@ -120,32 +120,31 @@ def generate_bullseye_signals(df):
     # We use a 1-year (252 day) rolling window to define the "local" mean
     df['OU_Stretch_Pct50D'] = compute_ou_stretch(df, 'Pct_Above_50D', window=252)
     
-    # Bullseye Buy Signal (Market Bottom)
-    # 1. Context: High probability of being in a Bear Regime (> 50%) or actually in it.
-    # 2. Stretch: O-U Stretch < -1.85 (Historically oversold / nearly 2 Standard Deviations below mean)
-    # 3. Thrust: 2-Day NNH Thrust is positive (Panic selling stopped, institutional buying emerged)
+    # --- Structural Fix for Bounded Variables (0% - 100%) ---
+    # Rolling Z-scores fail during deep bear markets because the mean participation drops to 20%.
+    # Dropping further to 0% is mathematically unable to reach a -2.0 standard deviation.
+    # Therefore, we combine Statistical Stretch with Absolute Boundary Capitulation.
     
-    buy_condition = (
-        (df['Prob_Bear_Regime'] > 0.5) & 
-        (df['OU_Stretch_Pct50D'] < -1.85) & 
-        (df['NNH_Thrust_2D'] > 0) & 
-        (df['Advance/Decline Ratio'] > 1.0) # Confirmatory A/D bounce
-    )
+    is_capitulating = (df['Pct_Above_50D'] < 0.20) | (df['OU_Stretch_Pct50D'] < -1.85)
+    is_euphoric = (df['Pct_Above_50D'] > 0.80) | (df['OU_Stretch_Pct50D'] > 1.85)
     
-    # Bullseye Sell Signal (Market Top)
-    # 1. Context: High probability of Bull Regime (> 70%)
-    # 2. Stretch: O-U Stretch > +1.85 (Overbought euphoria)
-    # 3. Thrust: Momentum stalling (NNH thrust turns negative)
+    # We allow a 3-day window where capitulation occurs before the actual price thrust
+    recent_capitulation = is_capitulating.rolling(window=3).max() > 0
+    recent_euphoria = is_euphoric.rolling(window=3).max() > 0
     
-    sell_condition = (
-        (df['Prob_Bull_Regime'] > 0.7) & 
-        (df['OU_Stretch_Pct50D'] > 1.85) & 
-        (df['NNH_Thrust_2D'] < 0) & 
-        (df['Advance/Decline Ratio'] < 1.0)
-    )
+    # --- Breadth Thrusts (Zweig-style confirmation) ---
+    # To prevent false positives in a downtrend, we wait for a massive buying thrust
+    buy_thrust = df['Advance/Decline Ratio'] > 2.0  # 2 stocks up for every 1 down
+    sell_thrust = df['Advance/Decline Ratio'] < 0.5 # 2 stocks down for every 1 up
     
-    df['Bullseye_Buy_Signal'] = buy_condition
-    df['Bullseye_Sell_Signal'] = sell_condition
+    # --- Tier 1 (Context) + Tier 2 (Stretch) + Tier 3 (Thrust) ---
+    raw_buy = (df['Prob_Bear_Regime'] > 0.5) & recent_capitulation & buy_thrust
+    raw_sell = (df['Prob_Bull_Regime'] > 0.6) & recent_euphoria & sell_thrust
+    
+    # --- Anti-Clustering Filter ---
+    # Only allow 1 distinct signal every 15 days to prevent UI dot clutter
+    df['Bullseye_Buy_Signal'] = raw_buy & (raw_buy.shift(1).rolling(15).sum() == 0)
+    df['Bullseye_Sell_Signal'] = raw_sell & (raw_sell.shift(1).rolling(15).sum() == 0)
     
     # Calculate Statistical Probability of Reversal based on Mean Reversion (Z-Score to CDF)
     # 1. stretch_prob: How extremely stretched is the market mathematically? (e.g., Z=2 -> 97.7%)
