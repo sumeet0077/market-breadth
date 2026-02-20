@@ -13,6 +13,7 @@ export type MarketData = {
     "No of stocks above 200 day SMA": number;
     "No of stocks above 50 day SMA": number;
     "No of stocks above 20 day SMA": number;
+    "No of stocks above all 3 SMAs": number;
     "No of stocks which are positive": number;
     "No of stocks which are negative": number;
     "Advance/Decline Ratio": number;
@@ -36,6 +37,7 @@ export const METRIC_CONFIG: Record<string, { type: 'good' | 'bad' | 'diverging';
     "No of stocks above 200 day SMA": { type: 'good', format: 'int' },
     "No of stocks above 50 day SMA": { type: 'good', format: 'int' },
     "No of stocks above 20 day SMA": { type: 'good', format: 'int' },
+    "No of stocks above all 3 SMAs": { type: 'good', format: 'int' },
     "No of stocks which are positive": { type: 'good', format: 'int' },
     "No of stocks which are negative": { type: 'bad', format: 'int' },
     "Advance/Decline Ratio": { type: 'diverging', format: 'float' },

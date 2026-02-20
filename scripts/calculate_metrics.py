@@ -112,6 +112,7 @@ def calculate_breadth_aggregates(df):
         (pl.col("Close") > pl.col("SMA200")).sum().alias("No of stocks above 200 day SMA"),
         (pl.col("Close") > pl.col("SMA50")).sum().alias("No of stocks above 50 day SMA"),
         (pl.col("Close") > pl.col("SMA20").fill_null(0)).sum().alias("No of stocks above 20 day SMA"),
+        ((pl.col("Close") > pl.col("SMA200")) & (pl.col("Close") > pl.col("SMA50")) & (pl.col("Close") > pl.col("SMA20").fill_null(0))).sum().alias("No of stocks above all 3 SMAs"),
         
         # 6. Market Breadth
         (pl.col("PctChange1D") > 0).sum().alias("No of stocks which are positive"),
@@ -138,6 +139,7 @@ def calculate_breadth_aggregates(df):
         "No of stocks above 200 day SMA",
         "No of stocks above 50 day SMA",
         "No of stocks above 20 day SMA",
+        "No of stocks above all 3 SMAs",
         "No of stocks which are positive",
         "No of stocks which are negative",
         "Advance/Decline Ratio",
