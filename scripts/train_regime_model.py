@@ -112,46 +112,75 @@ def train_and_label_hmm(df):
 
 def generate_bullseye_signals(df):
     """
-    Generates Bullseye Entry (Bottom) and Exit (Top) signals using Tier 1 (HMM) + Tier 2 (O-U).
+    Generates Bullseye Entry (Bottom) and Exit (Top) signals.
+    
+    V5 Architecture:
+    - Two-path capitulation detection (Deep absolute OR Sustained + O-U stretch)
+    - Zweig-style breadth thrust confirmation (AD > 3.0)
+    - NNH momentum recovery slope (5d MA improving)
+    - 20-day anti-clustering cooldown
     """
     print("Computing O-U Stretch and generating Bullseye Signals...")
     
     # Calculate O-U Stretch on Breadth Participation
-    # We use a 1-year (252 day) rolling window to define the "local" mean
     df['OU_Stretch_Pct50D'] = compute_ou_stretch(df, 'Pct_Above_50D', window=252)
     
-    # --- Structural Fix for Bounded Variables (0% - 100%) ---
-    # Rolling Z-scores fail during deep bear markets because the mean participation drops to 20%.
-    # Dropping further to 0% is mathematically unable to reach a -2.0 standard deviation.
-    # Therefore, we combine Statistical Stretch with Absolute Boundary Capitulation.
+    nnh_pct = df['Net New Highs'] / df['TotalTraded']
+    nnh_5d_ma = nnh_pct.rolling(window=5).mean()
     
-    is_capitulating = (df['Pct_Above_50D'] < 0.20) | (df['OU_Stretch_Pct50D'] < -1.85)
-    is_euphoric = (df['Pct_Above_50D'] > 0.80) | (df['OU_Stretch_Pct50D'] > 1.85)
+    # ============ BUY SIGNAL: Structural Bottom Detection ============
+    # 
+    # Two-path capitulation detection:
+    # Path A (Deep): ANY single day below 15% in the last 12 trading days
+    # Path B (Sustained): 5+ days below 25% in last 10 AND O-U stretch was < -1.5
+    deep_cap = (df['Pct_Above_50D'] < 0.15).rolling(window=12).max() > 0
+    sustained_cap = ((df['Pct_Above_50D'] < 0.25).rolling(window=10).sum() >= 5) & \
+                    (df['OU_Stretch_Pct50D'].rolling(window=10).min() < -1.5)
     
-    # We allow a 3-day window where capitulation occurs before the actual price thrust
-    recent_capitulation = is_capitulating.rolling(window=3).max() > 0
-    recent_euphoria = is_euphoric.rolling(window=3).max() > 0
+    is_capitulated = deep_cap | sustained_cap
     
-    # --- Breadth Thrusts (Zweig-style confirmation) ---
-    # To prevent false positives in a downtrend, we wait for a massive buying thrust
-    buy_thrust = df['Advance/Decline Ratio'] > 2.0  # 2 stocks up for every 1 down
-    sell_thrust = df['Advance/Decline Ratio'] < 0.5 # 2 stocks down for every 1 up
+    # Zweig-style breadth thrust: AD > 3.0 (decisive institutional buying)
+    buy_thrust = df['Advance/Decline Ratio'] > 3.0
     
-    # --- Tier 1 (Context) + Tier 2 (Stretch) + Tier 3 (Thrust) ---
-    raw_buy = (df['Prob_Bear_Regime'] > 0.5) & recent_capitulation & buy_thrust
-    raw_sell = (df['Prob_Bull_Regime'] > 0.6) & recent_euphoria & sell_thrust
+    # NNH recovery slope: 5-day MA must be improving vs 3 days ago
+    # This filters out dead-cat bounces where NNH stays deeply negative
+    nnh_improving = nnh_5d_ma > nnh_5d_ma.shift(3)
     
-    # --- Anti-Clustering Filter ---
-    # Only allow 1 distinct signal every 15 days to prevent UI dot clutter
-    df['Bullseye_Buy_Signal'] = raw_buy & (raw_buy.shift(1).rolling(15).sum() == 0)
-    df['Bullseye_Sell_Signal'] = raw_sell & (raw_sell.shift(1).rolling(15).sum() == 0)
+    # HMM Bear context
+    bear_context = df['Prob_Bear_Regime'] > 0.5
     
-    # Calculate Statistical Probability of Reversal based on Mean Reversion (Z-Score to CDF)
-    # 1. stretch_prob: How extremely stretched is the market mathematically? (e.g., Z=2 -> 97.7%)
+    raw_buy = bear_context & is_capitulated & buy_thrust & nnh_improving
+    
+    # Anti-clustering: 20 trading day cooldown between signals
+    df['Bullseye_Buy_Signal'] = raw_buy & (raw_buy.shift(1).rolling(20).sum() == 0)
+    
+    # ============ SELL SIGNAL: Structural Top Detection ============
+    # 
+    # Two-path euphoria detection:
+    # Path A (Deep): ANY single day above 75% in the last 12 trading days
+    # Path B (Sustained): 5+ days above 65% in last 10 AND O-U stretch was > 1.5
+    deep_euph = (df['Pct_Above_50D'] > 0.75).rolling(window=12).max() > 0
+    sustained_euph = ((df['Pct_Above_50D'] > 0.65).rolling(window=10).sum() >= 5) & \
+                     (df['OU_Stretch_Pct50D'].rolling(window=10).max() > 1.5)
+    
+    is_euphoric = deep_euph | sustained_euph
+    
+    # Negative thrust: AD < 0.40 (heavy institutional selling)
+    sell_thrust = df['Advance/Decline Ratio'] < 0.40
+    
+    # NNH was recently high (proving euphoria was real, not just a technical rebound)
+    nnh_was_high = nnh_pct.rolling(window=15).max() > 0.02
+    
+    # HMM Bull context
+    bull_context = df['Prob_Bull_Regime'] > 0.5
+    
+    raw_sell = bull_context & is_euphoric & sell_thrust & nnh_was_high
+    
+    # Anti-clustering: 20 trading day cooldown
+    df['Bullseye_Sell_Signal'] = raw_sell & (raw_sell.shift(1).rolling(20).sum() == 0)
+    
+    # ============ REVERSAL PROBABILITY CALCULATION ============
     stretch_prob = norm.cdf(df['OU_Stretch_Pct50D'].abs())
-    
-    # 2. Combined Reversal Probability (Context * Stretch Severity)
-    # Scales the stretch probability by the confidence we are actually in the corrective regime
     df['Buy_Reversal_Prob'] = (df['Prob_Bear_Regime'] * stretch_prob * 100).clip(upper=99.9).round(1)
     df['Sell_Reversal_Prob'] = (df['Prob_Bull_Regime'] * stretch_prob * 100).clip(upper=99.9).round(1)
     
