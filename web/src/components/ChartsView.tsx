@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Brush } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, ReferenceDot, Brush } from 'recharts';
 import { METRIC_CONFIG, MarketData } from './Heatmap';
 import { ArrowLeft, Calendar, Maximize2, X, ZoomIn, ZoomOut, RotateCcw, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
@@ -168,7 +168,9 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                 Date: d.Date,
                 Value: val,
                 Original: rawVal,
-                Total: d.TotalTraded
+                Total: d.TotalTraded,
+                BuySignal: d.Bullseye_Buy_Signal,
+                SellSignal: d.Bullseye_Sell_Signal
             };
         });
     }, [data, metric, isRatio]);
@@ -475,10 +477,17 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                             contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#f8fafc' }}
                             itemStyle={{ color: '#f8fafc' }}
                             labelStyle={{ color: '#94a3b8' }}
-                            formatter={(value: number | string | Array<number | string> | undefined) => {
+                            formatter={(value: number | string | Array<number | string> | undefined, name: any, props: any) => {
                                 const val = Number(value);
+                                const isBuy = props.payload?.BuySignal;
+                                const isSell = props.payload?.SellSignal;
+
+                                let label = (isNaN(val) ? value : val.toFixed(2)) + (isRatio ? '' : '%');
+                                if (isBuy) label += " 🟢 B_BUY";
+                                if (isSell) label += " 🔴 B_SELL";
+
                                 return [
-                                    (isNaN(val) ? value : val.toFixed(2)) + (isRatio ? '' : '%'),
+                                    label,
                                     isRatio ? "Ratio" : "Percentage"
                                 ];
                             }}
@@ -499,6 +508,30 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                                 : { r: isExpanded ? 6 : 4, fill: color }
                             }
                         />
+
+                        {/* Rendering Bullseye Signals as Overlays */}
+                        {chartData.filter(d => d.BuySignal).map((d) => (
+                            <ReferenceDot
+                                key={`buy-${d.Date}`}
+                                x={d.Date}
+                                y={d.Value}
+                                r={isExpanded ? 8 : 5}
+                                fill="#22c55e"
+                                stroke="#000"
+                                strokeWidth={2}
+                            />
+                        ))}
+                        {chartData.filter(d => d.SellSignal).map((d) => (
+                            <ReferenceDot
+                                key={`sell-${d.Date}`}
+                                x={d.Date}
+                                y={d.Value}
+                                r={isExpanded ? 8 : 5}
+                                fill="#ef4444"
+                                stroke="#000"
+                                strokeWidth={2}
+                            />
+                        ))}
 
                         {metric === "Net New Highs" && (
                             <>

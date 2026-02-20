@@ -46,7 +46,10 @@ jobs:
           # 3. Calculate Metrics (Reads from Master Copy)
           python scripts/calculate_metrics.py
           
-          # 4. Move JSON to Web Public folder (Crucial for Next.js)
+          # 4. Train Regime Model & Generate Bullseye Signals (Reads from JSON)
+          python scripts/train_regime_model.py
+          
+          # 5. Move JSON to Web Public folder (Crucial for Next.js)
           cp data/market_breadth.json web/public/market_breadth.json
 
       - name: Commit and Push Changes (Failsafe)

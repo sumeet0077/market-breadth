@@ -4,3 +4,7 @@ polars
 pyarrow
 duckdb
 tenacity
+
+hmmlearn
+scikit-learn
+joblib
