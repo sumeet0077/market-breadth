@@ -146,6 +146,15 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     const isNetNewHighs = metric === "Net New Highs";
     const config = METRIC_CONFIG[metric];
 
+    // Per-chart signal column mapping
+    const signalMap: Record<string, { buy: string, sell: string, prob: string }> = {
+        "No of stocks above 50 day SMA": { buy: "Bullseye_Buy_Signal", sell: "Bullseye_Sell_Signal", prob: "Buy_Reversal_Prob" },
+        "Net New Highs": { buy: "Bull_NNH_Buy", sell: "Bull_NNH_Sell", prob: "Bull_NNH_Prob" },
+        "No of stocks above 200 day SMA": { buy: "Bull_200SMA_Buy", sell: "Bull_200SMA_Sell", prob: "Bull_200SMA_Prob" },
+        "No of stocks above all 3 SMAs": { buy: "Bull_AllSMA_Buy", sell: "Bull_AllSMA_Sell", prob: "Bull_AllSMA_Prob" },
+    };
+    const signals = signalMap[metric];
+
     // Process data for this chart
     const chartData = useMemo(() => {
         return data.map(d => {
@@ -169,13 +178,13 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                 Value: val,
                 Original: rawVal,
                 Total: d.TotalTraded,
-                BuySignal: d.Bullseye_Buy_Signal,
-                SellSignal: d.Bullseye_Sell_Signal,
-                BuyProb: d.Buy_Reversal_Prob,
-                SellProb: d.Sell_Reversal_Prob
+                BuySignal: signals ? d[signals.buy] : false,
+                SellSignal: signals ? d[signals.sell] : false,
+                BuyProb: signals ? d[signals.prob] : 0,
+                SellProb: signals ? d[signals.prob] : 0
             };
         });
-    }, [data, metric, isRatio]);
+    }, [data, metric, isRatio, signals]);
 
     const title = isRatio ? metric : `${metric} (%)`;
     const color = config.type === 'bad' ? '#ef4444' : '#22c55e';
