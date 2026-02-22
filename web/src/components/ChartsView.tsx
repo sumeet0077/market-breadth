@@ -219,6 +219,7 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     const [zoomState, setZoomState] = useState<{ left: number, right: number }>({ left: 0, right: 0 });
     const zoomRef = useRef<{ left: number, right: number }>({ left: 0, right: 0 }); // Single source of truth for high-frequency updates
     const [isPanning, setIsPanning] = useState(false);
+    const isBrushDragging = useRef(false); // Track active Brush drag to isolate from panning
     const lastPanX = useRef(0);
     const lastMouseX = useRef(0); // Track hover position for pivot zoom
     const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -353,21 +354,24 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     // Mouse Drag (Panning) Handlers
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!isExpanded) return;
+        // If the Brush is being dragged, don't start panning
+        if (isBrushDragging.current) return;
 
         // Block panning if clicking in the Brush zone (bottom 60px of the container)
         if (chartContainerRef.current) {
             const rect = chartContainerRef.current.getBoundingClientRect();
             const clickY = e.clientY - rect.top;
             const containerHeight = rect.height;
-            // Brush occupies roughly the bottom 60px
             if (clickY > containerHeight - 60) {
-                return; // Let the Brush handle this interaction
+                isBrushDragging.current = true;
+                return;
             }
         }
 
         // Also check SVG class as fallback
         const target = e.target as HTMLElement;
         if (target && typeof target.closest === 'function' && target.closest('.recharts-brush')) {
+            isBrushDragging.current = true;
             return;
         }
 
@@ -408,8 +412,17 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
         }
     };
 
-    const handleMouseUp = () => { setIsPanning(false); };
+    const handleMouseUp = () => { setIsPanning(false); isBrushDragging.current = false; };
     const handleMouseLeave = () => { setIsPanning(false); };
+
+    // Global mouseup listener to catch brush drag release even outside the container
+    useEffect(() => {
+        const handleGlobalMouseUp = () => {
+            isBrushDragging.current = false;
+        };
+        window.addEventListener('mouseup', handleGlobalMouseUp);
+        return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+    }, []);
 
     return (
         <div className={`bg-slate-900 border border-slate-800 rounded-xl shadow-lg flex flex-col ${isExpanded ? 'h-full border-none shadow-none bg-transparent' : 'h-[300px] p-4'}`}>
@@ -599,7 +612,10 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                                                 left = Math.max(0, right - 10);
                                             }
                                         }
-                                        updateZoomState({ left: left, right: right });
+                                        // Synchronous update (no RAF) to prevent Brush from losing drag state
+                                        const newState = { left, right };
+                                        zoomRef.current = newState;
+                                        setZoomState(newState);
                                     }
                                 }}
                             />
