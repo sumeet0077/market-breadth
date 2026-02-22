@@ -412,13 +412,23 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
         }
     };
 
-    const handleMouseUp = () => { setIsPanning(false); isBrushDragging.current = false; };
+    const handleMouseUp = () => {
+        setIsPanning(false);
+        // If the Brush was being dragged, sync the final position to state
+        if (isBrushDragging.current) {
+            isBrushDragging.current = false;
+            setZoomState({ ...zoomRef.current });
+        }
+    };
     const handleMouseLeave = () => { setIsPanning(false); };
 
     // Global mouseup listener to catch brush drag release even outside the container
     useEffect(() => {
         const handleGlobalMouseUp = () => {
-            isBrushDragging.current = false;
+            if (isBrushDragging.current) {
+                isBrushDragging.current = false;
+                setZoomState({ ...zoomRef.current });
+            }
         };
         window.addEventListener('mouseup', handleGlobalMouseUp);
         return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
@@ -604,7 +614,7 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                                     if (range && range.startIndex !== undefined && range.endIndex !== undefined) {
                                         let left = range.startIndex;
                                         let right = range.endIndex;
-                                        // Enforce 10-day minimum to prevent slider from collapsing completely and freezing
+                                        // Enforce 10-day minimum
                                         if (right - left < 10) {
                                             if (left + 10 < chartData.length) right = left + 10;
                                             else {
@@ -612,10 +622,10 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                                                 left = Math.max(0, right - 10);
                                             }
                                         }
-                                        // Synchronous update (no RAF) to prevent Brush from losing drag state
-                                        const newState = { left, right };
-                                        zoomRef.current = newState;
-                                        setZoomState(newState);
+                                        // ONLY update ref during drag — NO setState, NO re-render.
+                                        // This preserves the Brush's internal drag tracking.
+                                        // State is synced on mouseup via handleMouseUp/handleGlobalMouseUp.
+                                        zoomRef.current = { left, right };
                                     }
                                 }}
                             />
