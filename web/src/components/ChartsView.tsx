@@ -354,7 +354,18 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!isExpanded) return;
 
-        // Prevent pan behavior if clicking the Brush slider
+        // Block panning if clicking in the Brush zone (bottom 60px of the container)
+        if (chartContainerRef.current) {
+            const rect = chartContainerRef.current.getBoundingClientRect();
+            const clickY = e.clientY - rect.top;
+            const containerHeight = rect.height;
+            // Brush occupies roughly the bottom 60px
+            if (clickY > containerHeight - 60) {
+                return; // Let the Brush handle this interaction
+            }
+        }
+
+        // Also check SVG class as fallback
         const target = e.target as HTMLElement;
         if (target && typeof target.closest === 'function' && target.closest('.recharts-brush')) {
             return;
@@ -577,7 +588,7 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                                 endIndex={zoomState.right}
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 onChange={(range: any) => {
-                                    if (!isPanning && range && range.startIndex !== undefined && range.endIndex !== undefined) {
+                                    if (range && range.startIndex !== undefined && range.endIndex !== undefined) {
                                         let left = range.startIndex;
                                         let right = range.endIndex;
                                         // Enforce 10-day minimum to prevent slider from collapsing completely and freezing
