@@ -596,6 +596,28 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                                 <ReferenceLine y={-12.0} stroke="#a855f7" strokeDasharray="3 3" strokeWidth={2} label={{ value: 'ALL IN (-12%)', position: 'right', fill: '#a855f7', fontSize: 10, fontWeight: 'bold' }} />
                             </>
                         )}
+                        {metric === "No of stocks above 200 day SMA" && (
+                            <>
+                                {/* Amber (Warning): 95th and 5th Percentile */}
+                                <ReferenceLine y={77.6} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: '95th (77.6%)', position: 'right', fill: '#f59e0b', fontSize: 10 }} />
+                                <ReferenceLine y={17.0} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: '5th (17.0%)', position: 'right', fill: '#f59e0b', fontSize: 10 }} />
+
+                                {/* Red (Extreme): 99th and 1st Percentile */}
+                                <ReferenceLine y={84.4} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: '99th (84.4%)', position: 'right', fill: '#ef4444', fontSize: 10 }} />
+                                <ReferenceLine y={12.3} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: '1st (12.3%)', position: 'right', fill: '#ef4444', fontSize: 10 }} />
+                            </>
+                        )}
+                        {metric === "No of stocks above all 3 SMAs" && (
+                            <>
+                                {/* Amber (Warning): 95th and 5th Percentile */}
+                                <ReferenceLine y={53.7} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: '95th (53.7%)', position: 'right', fill: '#f59e0b', fontSize: 10 }} />
+                                <ReferenceLine y={8.7} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1} label={{ value: '5th (8.7%)', position: 'right', fill: '#f59e0b', fontSize: 10 }} />
+
+                                {/* Red (Extreme): 99th and 1st Percentile */}
+                                <ReferenceLine y={67.6} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: '99th (67.6%)', position: 'right', fill: '#ef4444', fontSize: 10 }} />
+                                <ReferenceLine y={6.0} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} label={{ value: '1st (6.0%)', position: 'right', fill: '#ef4444', fontSize: 10 }} />
+                            </>
+                        )}
                         {metric === "Advance/Decline Ratio" && <ReferenceLine y={1} stroke="#374151" />}
 
                         {/* Interactive Brush Control for Expanded View */}
