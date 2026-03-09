@@ -41,7 +41,8 @@ def ingest_single_file(con, daily_file):
                 auto_detect=False, 
                 columns={column_spec}, 
                 encoding='utf-8',
-                ignore_errors=True
+                ignore_errors=True,
+                strict_mode=False
             )
         """
         con.execute(query_view)
@@ -54,7 +55,9 @@ def ingest_single_file(con, daily_file):
             
             if ingest_date and ingest_date[0]:
                 check_date = ingest_date[0]
-                print(f"Checking for existing data on {check_date}...")
+                # Log filename date vs internal date
+                filename = os.path.basename(daily_file)
+                print(f"File: {filename} | Internal Date: {check_date.date()}")
                 
                 # Check if local master exists and contains this date
                 local_master_check = "data/parquet/master_copy.parquet"
@@ -63,12 +66,12 @@ def ingest_single_file(con, daily_file):
                     try:
                         existing_count = con.execute(count_query, [check_date]).fetchone()[0]
                         if existing_count > 0:
-                            print(f"Data for {check_date} already exists ({existing_count} rows). Skipping ingestion.")
+                            print(f"  --> Data for {check_date.date()} already exists. Skipping.")
                             return
                     except Exception as e:
-                        print(f"Warning during idempotency check: {e}. Proceeding with ingestion.")
+                        print(f"Warning during idempotency check: {e}. Proceeding.")
         except Exception as e:
-             print(f"Skipping idempotency check due to error: {e}")
+             print(f"Skipping idempotency check: {e}")
 
         # 4. Copy-on-Write Logic
         original_master = "NSE Master parquet/nse_master_adjusted_2014_onwards.parquet"

@@ -35,12 +35,20 @@ else:
 END_DATE = datetime.now()
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "Accept-Language": "en-US,en;q=0.9",
     "Accept-Encoding": "gzip, deflate, br",
     "Connection": "keep-alive",
-    "Referer": "https://www.nseindia.com/all-reports"
+    "Referer": "https://www.nseindia.com/all-reports",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"macOS"',
+    "Upgrade-Insecure-Requests": "1"
 }
 
 SESSION = requests.Session()
@@ -107,9 +115,13 @@ def main():
     
     # Establish a clean session visit
     try:
-        SESSION.get("https://www.nseindia.com", timeout=10)
-    except:
-        pass
+        print("Establishing session via reports page...")
+        # Visiting all-reports sets the necessary cookies for archive access
+        SESSION.get("https://www.nseindia.com/all-reports", timeout=15)
+        print(f"Session established. Cookies: {dict(SESSION.cookies)}")
+    except Exception as e:
+        print(f"Warning: Failed to establish session: {e}")
+        # Proceed anyway as some headers might still work
 
     dates = []
     curr = START_DATE
