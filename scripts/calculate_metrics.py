@@ -100,7 +100,7 @@ def calculate_breadth_aggregates(df):
         (pl.col("PctChange1D") >= 0.045).sum().alias("No. of stocks up 4.5%+ in the current day"),
         
         # 2. Stocks down 4.5%+
-        (pl.col("PctChange1D") <= -0.045).sum().alias("No. of stocs down 4.5%+ in the current day"),
+        (pl.col("PctChange1D") <= -0.045).sum().alias("No. of stocks down 4.5%+ in the current day"),
         
         # 3. Up 20% in 5 days
         (pl.col("PctChange5D") >= 0.20).sum().alias("No. of stocks up 20%+ in 5 days"),
@@ -133,7 +133,7 @@ def calculate_breadth_aggregates(df):
     final_cols = [
         "Date",
         "No. of stocks up 4.5%+ in the current day",
-        "No. of stocs down 4.5%+ in the current day",
+        "No. of stocks down 4.5%+ in the current day",
         "No. of stocks up 20%+ in 5 days",
         "No. of stocks down 20%+ in 5 days",
         "No of stocks above 200 day SMA",

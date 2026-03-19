@@ -7,7 +7,7 @@ import { ArrowUp, ArrowDown } from 'lucide-react';
 export type MarketData = {
     Date: string;
     "No. of stocks up 4.5%+ in the current day": number;
-    "No. of stocs down 4.5%+ in the current day": number;
+    "No. of stocks down 4.5%+ in the current day": number;
     "No. of stocks up 20%+ in 5 days": number;
     "No. of stocks down 20%+ in 5 days": number;
     "No of stocks above 200 day SMA": number;
@@ -31,7 +31,7 @@ interface HeatmapProps {
 
 export const METRIC_CONFIG: Record<string, { type: 'good' | 'bad' | 'diverging'; format: 'int' | 'float' | 'pct' }> = {
     "No. of stocks up 4.5%+ in the current day": { type: 'good', format: 'int' },
-    "No. of stocs down 4.5%+ in the current day": { type: 'bad', format: 'int' },
+    "No. of stocks down 4.5%+ in the current day": { type: 'bad', format: 'int' },
     "No. of stocks up 20%+ in 5 days": { type: 'good', format: 'int' },
     "No. of stocks down 20%+ in 5 days": { type: 'bad', format: 'int' },
     "No of stocks above 200 day SMA": { type: 'good', format: 'int' },
