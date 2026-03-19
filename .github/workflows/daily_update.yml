@@ -2,12 +2,14 @@ name: Daily Data Update
 
 on:
   schedule:
-    # Run at 16:30 IST (11:00 UTC) - first attempt, catch early bhavcopy
+    # Run at 16:30 IST (11:00 UTC)
     - cron: '0 11 * * 1-5'
-    # Run at 17:30 IST (12:00 UTC) - second attempt
+    # Run at 17:00 IST (11:30 UTC)
+    - cron: '30 11 * * 1-5'
+    # Run at 17:30 IST (12:00 UTC)
     - cron: '0 12 * * 1-5'
-    # Run at 18:30 IST (13:00 UTC) - third attempt, catch late bhavcopy
-    - cron: '0 13 * * 1-5'
+    # Run at 18:00 IST (12:30 UTC)
+    - cron: '30 12 * * 1-5'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
