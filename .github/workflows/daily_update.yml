@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -32,7 +32,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Cache Raw Data
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: data/raw_bhavcopies
           key: ${{ runner.os }}-raw-data-${{ hashFiles('scripts/fetch_data.py') }}
