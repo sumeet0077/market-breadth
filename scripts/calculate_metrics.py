@@ -46,6 +46,14 @@ def calculate_stock_indicators(df):
         after_count = len(df)
         print(f"Filtered to EQ series only: {before_count} -> {after_count} rows ({before_count - after_count} non-EQ removed)")
 
+    # Deduplicate: year-boundary parquet partitions can cause duplicate rows
+    # (e.g., Dec 31, 2021 had every symbol duplicated 2x).
+    before_dedup = len(df)
+    df = df.unique(subset=["Symbol", "Date"], keep="first")
+    after_dedup = len(df)
+    if before_dedup != after_dedup:
+        print(f"Deduplicated: {before_dedup} -> {after_dedup} rows ({before_dedup - after_dedup} duplicates removed)")
+
     # Sort just in case
     df = df.sort(["Symbol", "Date"])
     
