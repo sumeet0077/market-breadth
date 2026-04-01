@@ -36,6 +36,16 @@ def calculate_stock_indicators(df):
     # Ensure Date is Date type (it might be timestamp in master)
     df = df.with_columns(pl.col("Date").cast(pl.Date))
 
+    # Filter to equity series only for consistent breadth calculations.
+    # Historical data (pre-Feb 18, 2026) contains non-equity series (SM, ST, GB, GS, etc.)
+    # that inflate TotalTraded by ~580 rows/day and pollute breadth counts.
+    series_col = "series" if "series" in df.columns else ("Series" if "Series" in df.columns else None)
+    if series_col:
+        before_count = len(df)
+        df = df.filter(pl.col(series_col) == "EQ")
+        after_count = len(df)
+        print(f"Filtered to EQ series only: {before_count} -> {after_count} rows ({before_count - after_count} non-EQ removed)")
+
     # Sort just in case
     df = df.sort(["Symbol", "Date"])
     
