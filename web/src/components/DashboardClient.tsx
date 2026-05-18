@@ -177,7 +177,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                         label="Advance/Decline Ratio"
                         value={latestView["Advance/Decline Ratio"].toFixed(2)}
                         delta={(latestView["Advance/Decline Ratio"] - prevView["Advance/Decline Ratio"]).toFixed(2)}
-                        isGood={latestView["Advance/Decline Ratio"] > 1}
+                        isGood={true}
                     />
 
                     {/* 3. Net New 52W Highs % */}
@@ -186,7 +186,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                         value={latestView && latestView.TotalTraded ? `${((latestView["Net New Highs"] / latestView.TotalTraded) * 100).toFixed(2)}%` : "0%"}
                         delta={((latestView && latestView.TotalTraded ? (latestView["Net New Highs"] / latestView.TotalTraded) * 100 : 0) -
                             (prevView && prevView.TotalTraded ? (prevView["Net New Highs"] / prevView.TotalTraded) * 100 : 0)).toFixed(2) + "%"}
-                        isGood={latestView["Net New Highs"] > 0}
+                        isGood={true}
                     />
                 </section>
             )}
