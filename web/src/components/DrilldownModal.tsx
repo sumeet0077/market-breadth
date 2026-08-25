@@ -171,7 +171,7 @@ export function DrilldownModal({
 }: DrilldownModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
-  const [sortField, setSortField] = useState<'p1' | 'p5' | 'c' | 'to' | 'v' | 's' | 'score'>('p1');
+  const [sortField, setSortField] = useState<'p1' | 'p5' | 'c' | 'to' | 'v' | 's' | 'score' | 'sec' | 'rvol'>('score');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Top Level Mode: 'setups' (Top Setups & Sector Clusters) vs 'constituents' (All Stocks Table)
@@ -350,31 +350,55 @@ export function DrilldownModal({
     }
 
     return [...result].sort((a, b) => {
-      if (sortField === 'score') {
-        return sortOrder === 'asc' ? a.score - b.score : b.score - a.score;
+      let valA: any = 0;
+      let valB: any = 0;
+
+      switch (sortField) {
+        case 's':
+          return sortOrder === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
+        case 'sec':
+          valA = a.sector || '';
+          valB = b.sector || '';
+          return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        case 'score':
+          valA = a.score || 0;
+          valB = b.score || 0;
+          break;
+        case 'c':
+          valA = a.close || 0;
+          valB = b.close || 0;
+          break;
+        case 'p1':
+          valA = a.pct1d || 0;
+          valB = b.pct1d || 0;
+          break;
+        case 'p5':
+          valA = a.pct5d || 0;
+          valB = b.pct5d || 0;
+          break;
+        case 'rvol':
+          valA = a.rvol || 0;
+          valB = b.rvol || 0;
+          break;
+        case 'to':
+          valA = a.turnover_cr || 0;
+          valB = b.turnover_cr || 0;
+          break;
+        default:
+          valA = a.score || 0;
+          valB = b.score || 0;
       }
-      if (sortField === 'p1') {
-        return sortOrder === 'asc' ? a.pct1d - b.pct1d : b.pct1d - a.pct1d;
-      }
-      if (sortField === 'p5') {
-        return sortOrder === 'asc' ? a.pct5d - b.pct5d : b.pct5d - a.pct5d;
-      }
-      if (sortField === 'to') {
-        return sortOrder === 'asc' ? a.turnover_cr - b.turnover_cr : b.turnover_cr - a.turnover_cr;
-      }
-      if (sortField === 's') {
-        return sortOrder === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
-      }
-      return b.score - a.score;
+
+      return sortOrder === 'asc' ? valA - valB : valB - valA;
     });
   }, [rawTopSetups, selectedSectorFilter, minTurnoverCr, searchQuery, sortField, sortOrder]);
 
-  const handleSort = (field: 'p1' | 'p5' | 'c' | 'to' | 'v' | 's' | 'score') => {
+  const handleSort = (field: 'p1' | 'p5' | 'c' | 'to' | 'v' | 's' | 'score' | 'sec' | 'rvol') => {
     if (sortField === field) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortOrder(field === 's' ? 'asc' : 'desc');
+      setSortOrder(field === 's' || field === 'sec' ? 'asc' : 'desc');
     }
   };
 
@@ -779,15 +803,118 @@ export function DrilldownModal({
               <table className="w-full text-xs md:text-sm text-left border-collapse">
                 <thead className="bg-slate-900 text-slate-400 sticky top-0 z-20 text-[11px] uppercase tracking-wider select-none border-b border-slate-800">
                   <tr>
-                    <th className="px-3 py-3 w-10 text-center text-slate-600 font-mono">#</th>
-                    <th className="px-4 py-3 font-semibold text-slate-300">Symbol</th>
-                    <th className="px-4 py-3 font-semibold text-slate-300">Sector Theme & Cluster</th>
-                    <th className="px-4 py-3 text-center font-semibold text-slate-300">Setup Quality</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-300">Price (₹)</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-300">1D %</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-300">5D %</th>
-                    <th className="px-4 py-3 text-center font-semibold text-slate-300">RVOL / CLV</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-300">Turnover (Cr)</th>
+                    <th 
+                      className="px-3 py-3 w-10 text-center text-slate-500 font-mono cursor-pointer hover:text-slate-200 transition-colors"
+                      onClick={() => handleSort('score')}
+                      title="Sort by Setup Quality Score"
+                    >
+                      #
+                    </th>
+                    <th 
+                      className="px-4 py-3 font-semibold text-slate-300 cursor-pointer hover:text-white transition-colors"
+                      onClick={() => handleSort('s')}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Symbol</span>
+                        {sortField === 's' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 font-semibold text-slate-300 cursor-pointer hover:text-white transition-colors"
+                      onClick={() => handleSort('sec')}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Sector Theme & Cluster</span>
+                        {sortField === 'sec' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center font-semibold text-slate-300 cursor-pointer hover:text-white transition-colors"
+                      onClick={() => handleSort('score')}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <span>Setup Quality</span>
+                        {sortField === 'score' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-right font-semibold text-slate-300 cursor-pointer hover:text-white transition-colors"
+                      onClick={() => handleSort('c')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        <span>Price (₹)</span>
+                        {sortField === 'c' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-right font-semibold text-slate-300 cursor-pointer hover:text-white transition-colors"
+                      onClick={() => handleSort('p1')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        <span>1D %</span>
+                        {sortField === 'p1' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-right font-semibold text-slate-300 cursor-pointer hover:text-white transition-colors"
+                      onClick={() => handleSort('p5')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        <span>5D %</span>
+                        {sortField === 'p5' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center font-semibold text-slate-300 cursor-pointer hover:text-white transition-colors"
+                      onClick={() => handleSort('rvol')}
+                      title="Sort by Relative Volume (RVOL)"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <span>RVOL / CLV</span>
+                        {sortField === 'rvol' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-right font-semibold text-slate-300 cursor-pointer hover:text-white transition-colors"
+                      onClick={() => handleSort('to')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        <span>Turnover (Cr)</span>
+                        {sortField === 'to' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
+                      </div>
+                    </th>
                     <th className="px-4 py-3 text-center w-24 font-semibold text-slate-400">Charts</th>
                   </tr>
                 </thead>
@@ -941,7 +1068,11 @@ export function DrilldownModal({
                     >
                       <div className="flex items-center gap-1">
                         <span>Symbol</span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        {sortField === 's' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
                       </div>
                     </th>
                     <th 
@@ -950,7 +1081,11 @@ export function DrilldownModal({
                     >
                       <div className="flex items-center justify-end gap-1">
                         <span>Price (₹)</span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        {sortField === 'c' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
                       </div>
                     </th>
                     <th 
@@ -959,7 +1094,11 @@ export function DrilldownModal({
                     >
                       <div className="flex items-center justify-end gap-1">
                         <span>1-Day %</span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        {sortField === 'p1' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
                       </div>
                     </th>
                     {is5DMetric && (
@@ -969,7 +1108,11 @@ export function DrilldownModal({
                       >
                         <div className="flex items-center justify-end gap-1">
                           <span>5-Day %</span>
-                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                          {sortField === 'p5' ? (
+                            <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                          )}
                         </div>
                       </th>
                     )}
@@ -979,7 +1122,11 @@ export function DrilldownModal({
                     >
                       <div className="flex items-center justify-end gap-1">
                         <span>Turnover (Cr)</span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        {sortField === 'to' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
                       </div>
                     </th>
                     <th 
@@ -988,7 +1135,11 @@ export function DrilldownModal({
                     >
                       <div className="flex items-center justify-end gap-1">
                         <span>Volume (Shares)</span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        {sortField === 'v' ? (
+                          <span className="text-cyan-400 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
                       </div>
                     </th>
                     <th className="px-4 py-3 text-center w-24 font-semibold text-slate-400">Charts</th>
