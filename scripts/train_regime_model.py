@@ -28,28 +28,30 @@ def load_data():
 
 def extract_features(df):
     """
-    Extracts velocity, stretch, and momentum features required for the HMM and O-U process.
+    Extracts multi-dimensional structural macro and tactical breadth features.
     """
-    # Defensive copy
     features_df = df.copy()
+    tt = features_df['TotalTraded'].replace(0, np.nan)
     
-    # --- Feature 1: Advance/Decline Ratio (Log-scaled) ---
-    # Log scale standardizes ratio so that 2.0 (2:1) is same distance from 0 as 0.5 (1:2)
+    # --- 1. Multi-Timeframe Trend Participation ---
+    features_df['Pct_Above_200D'] = features_df['No of stocks above 200 day SMA'] / tt
+    features_df['Pct_Above_50D'] = features_df['No of stocks above 50 day SMA'] / tt
+    features_df['Pct_Above_20D'] = features_df['No of stocks above 20 day SMA'] / tt
+    features_df['Pct_Above_AllSMA'] = features_df['No of stocks above all 3 SMAs'] / tt
+    
+    # --- 2. Advance/Decline Velocity ---
     features_df['Log_AD_Ratio'] = np.log(features_df['Advance/Decline Ratio'].clip(lower=0.01))
-    
-    # Velocity of A/D Ratio (5-day slope approximation)
     features_df['AD_Velocity'] = features_df['Log_AD_Ratio'] - features_df['Log_AD_Ratio'].shift(5)
+    features_df['AD_Velocity_10D'] = features_df['Log_AD_Ratio'] - features_df['Log_AD_Ratio'].shift(10)
     
-    # --- Feature 2: Breadth Participation (% Stocks above 50D SMA) ---
-    features_df['Pct_Above_50D'] = features_df['No of stocks above 50 day SMA'] / features_df['TotalTraded']
-    
-    # --- Feature 3: Net New Highs Thrust ---
-    # Normalizing by TotalTraded to account for growing universe size
-    features_df['Net_New_Highs_Pct'] = features_df['Net New Highs'] / features_df['TotalTraded']
+    # --- 3. Net New Highs Macro Trend (20-day rolling mean) ---
+    features_df['Net_New_Highs_Pct'] = features_df['Net New Highs'] / tt
     features_df['NNH_Thrust_2D'] = features_df['Net_New_Highs_Pct'] - features_df['Net_New_Highs_Pct'].shift(2)
+    features_df['Macro_NNH_20D'] = features_df['Net_New_Highs_Pct'].rolling(20, min_periods=5).mean()
     
     # Forward fill or drop NAs safely for modeling
-    features_df = features_df.dropna(subset=['AD_Velocity', 'Pct_Above_50D', 'NNH_Thrust_2D']).reset_index(drop=True)
+    clean_cols = ['AD_Velocity', 'Pct_Above_50D', 'Pct_Above_200D', 'Pct_Above_AllSMA', 'Macro_NNH_20D']
+    features_df = features_df.dropna(subset=clean_cols).reset_index(drop=True)
     
     return features_df
 
@@ -65,18 +67,15 @@ def compute_ou_stretch(df, column, window=252):
 
 def train_and_label_hmm(df):
     """
-    Trains a Gaussian HMM on the historical features to classify market regimes.
+    Trains a 4-State Multi-Dimensional Gaussian HMM on historical macro breadth features.
     """
-    print("Training Hidden Markov Model for Regime Detection...")
+    print("Training Multi-Dimensional 4-State Hidden Markov Model for Macro Regime Detection...")
     
-    # Features selected for HMM Training
-    X_train = df[['AD_Velocity', 'Pct_Above_50D']].values
+    macro_features = ['Pct_Above_200D', 'Pct_Above_50D', 'Pct_Above_AllSMA', 'AD_Velocity', 'Macro_NNH_20D']
+    X_train = df[macro_features].values
     
-    # Initialize 3-state HMM (Bull, Bear, Transition/Chop)
-    # Using 'full' covariance to capture correlations between Velocity and Absolute Participation
-    model = hmm.GaussianHMM(n_components=3, covariance_type="full", n_iter=1000, random_state=42)
-    
-    # Fit the model
+    # 4-State Macro HMM with diagonal covariance
+    model = hmm.GaussianHMM(n_components=4, covariance_type="diag", n_iter=1000, random_state=42)
     model.fit(X_train)
     
     # Persist the model
@@ -85,28 +84,29 @@ def train_and_label_hmm(df):
     joblib.dump(model, MODEL_PATH)
     print(f"Model saved to {MODEL_PATH}")
     
-    # Predict the hidden states
-    hidden_states = model.predict(X_train)
+    # Sort states by 200 SMA mean to ensure consistent macro hierarchy
+    states_order = np.argsort([m[0] for m in model.means_])
     
-    # Re-map states based on fundamental reality so State indices are consistent
-    # We want State 0 = Bear (Lowest Mean Pct_Above_50D), State 2 = Bull (Highest Mean Pct_Above_50D)
-    mean_pct_50d_by_state = {i: df['Pct_Above_50D'][hidden_states == i].mean() for i in range(3)}
+    # State mapping:
+    # 0: Bear (<25%), 1: Tactical Relief/Repair (~35%), 2: Bull Pullback/Consolidation (~53%), 3: Full Bull (~74%)
+    state_names = {
+        states_order[0]: "🔴 Structural Bear Contraction",
+        states_order[1]: "🟠 Tactical Relief / Repair",
+        states_order[2]: "🟡 Bull Consolidation / Pullback",
+        states_order[3]: "🟢 Full Macro Bull Expansion"
+    }
     
-    # Sort states by their mean participation rate
-    sorted_states = sorted(mean_pct_50d_by_state, key=mean_pct_50d_by_state.get)
-    mapping = {sorted_states[0]: 0, sorted_states[1]: 1, sorted_states[2]: 2}
-    
-    mapped_states = [mapping[state] for state in hidden_states]
-    
-    # Extract prediction probabilities
     state_probs = model.predict_proba(X_train)
+    hidden_states = np.argmax(state_probs, axis=1)
     
-    df['Regime_State'] = mapped_states
+    df['Macro_Regime'] = [state_names[s] for s in hidden_states]
+    df['Regime_State'] = [np.where(states_order == s)[0][0] for s in hidden_states]
     
-    # Re-mapped probabilities
-    df['Prob_Bear_Regime'] = [props[sorted_states[0]] for props in state_probs]
-    df['Prob_Chop_Regime'] = [props[sorted_states[1]] for props in state_probs]
-    df['Prob_Bull_Regime'] = [props[sorted_states[2]] for props in state_probs]
+    # Backward compatible probability fields
+    df['Prob_Bear_Regime'] = state_probs[:, states_order[0]]
+    df['Prob_Chop_Regime'] = state_probs[:, states_order[1]] + state_probs[:, states_order[2]]
+    df['Prob_Bull_Regime'] = state_probs[:, states_order[3]]
+    df['Prob_Macro_Confidence'] = [state_probs[i, s] for i, s in enumerate(hidden_states)]
     
     return df
 

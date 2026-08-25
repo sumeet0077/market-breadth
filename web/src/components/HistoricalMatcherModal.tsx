@@ -189,7 +189,7 @@ export const HistoricalMatcherModal: React.FC<HistoricalMatcherModalProps> = ({
         adRatio: parseFloat(adRatio.toFixed(2)),
         nnhPct: parseFloat(nnhPct.toFixed(1)),
         swingScore: parseFloat(swingScore.toFixed(1)),
-        macroRegime: record.Macro_Regime || '🟡 Consolidation',
+        macroRegime: record.Macro_Regime || (record.Regime_State === 3 ? "🟢 Full Bull Expansion" : record.Regime_State === 2 ? "🟡 Bull Consolidation" : record.Regime_State === 1 ? "🟠 Tactical Relief" : "🔴 Bear Contraction"),
         fwd20d: parseFloat(fwd20d.toFixed(1)),
         mfe20d: parseFloat(mfe20d.toFixed(1)),
         mae20d: parseFloat(mae20d.toFixed(1)),

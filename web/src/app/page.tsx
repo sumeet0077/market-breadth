@@ -30,17 +30,7 @@ export default async function Home() {
   const sortedData = data.sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime());
 
   return (
-    <main className="min-h-screen p-4 md:p-8 space-y-8 max-w-[1800px] mx-auto">
-      {/* Header */}
-      <header className="space-y-2">
-        <h1 className="text-3xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-          Market Breadth Dashboard
-        </h1>
-        <p className="text-slate-400 max-w-2xl text-lg">
-          Tracking internal market strength across NSE stocks.
-        </p>
-      </header>
-
+    <main className="min-h-screen p-3 md:p-6 space-y-6 max-w-[1880px] mx-auto">
       <DashboardClient initialData={sortedData} />
     </main>
   );

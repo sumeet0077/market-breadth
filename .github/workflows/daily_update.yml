@@ -51,6 +51,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-raw-data-
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
       - name: Run Data Pipeline
         env:
           LOOKBACK_DAYS: 30
@@ -67,8 +74,23 @@ jobs:
           # 4. Train Regime Model & Generate Bullseye Signals (Reads from JSON)
           python scripts/train_regime_model.py
           
-          # 5. Move JSON to Web Public folder (Crucial for Next.js)
+          # 5. Train ML Swing Follow-Through Model
+          python scripts/train_swing_model.py
+          
+          # 6. Enrich Sector Themes, Breakout Setups & Drilldowns
+          python scripts/enrich_sector_setups.py
+          
+          # 7. Run Automated Pre-Commit Data Validation Guardrail
+          python scripts/validate_pipeline_data.py
+          
+          # 8. Move JSON to Web Public folder (Crucial for Next.js)
           cp data/market_breadth.json web/public/market_breadth.json
+
+      - name: Verify Next.js Production Build
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
 
       - name: Commit and Push Changes
         run: |
@@ -81,7 +103,7 @@ jobs:
             exit 0
           fi
           
-          git add data/ web/public/market_breadth.json
+          git add data/ web/public/
           git commit -m "📈 Auto-update: Market Breadth Data [skip ci]"
           
           # Robust Push with Merge-based Conflict Resolution

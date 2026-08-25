@@ -1,0 +1,6 @@
+.venv
+.venv_recovery
+__pycache__
+*.parquet
+NSE Master parquet
+market.duckdb

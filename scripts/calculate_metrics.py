@@ -1,6 +1,7 @@
 import polars as pl
 import duckdb
 import os
+import json
 from datetime import datetime
 
 INPUT_FILE = "data/parquet/master_copy.parquet"
@@ -170,6 +171,66 @@ def calculate_breadth_aggregates(df):
 
     return daily_stats.select(final_cols).sort("Date")
 
+def generate_annual_drilldowns(df):
+    """
+    Generates compact annual JSON files containing stock-level drilldown data.
+    Tuples schema: [Symbol, Close, Pct1D, Pct5D, Volume]
+    """
+    print("Generating annual drilldown JSON datasets...")
+    data_drilldown_dir = "data/drilldowns"
+    web_drilldown_dir = "web/public/drilldowns"
+    os.makedirs(data_drilldown_dir, exist_ok=True)
+    os.makedirs(web_drilldown_dir, exist_ok=True)
+    
+    # Filter for display (2015 onwards)
+    df_filtered = df.filter(pl.col("Date") >= datetime(2015, 1, 1))
+    
+    # Extract unique years
+    df_filtered = df_filtered.with_columns(pl.col("Date").dt.year().alias("Year"))
+    years = sorted(df_filtered["Year"].unique().to_list())
+    
+    for yr in years:
+        df_yr = df_filtered.filter(pl.col("Year") == yr)
+        drill_yr = {}
+        
+        for d_val in df_yr["Date"].unique().sort():
+            sub = df_yr.filter(pl.col("Date") == d_val)
+            d_str = str(d_val)
+            
+            def extract_tuples(sub_filtered, sort_col, desc=True):
+                if len(sub_filtered) == 0:
+                    return []
+                res = sub_filtered.sort(sort_col, descending=desc).select([
+                    pl.col("Symbol"),
+                    pl.col("Close").round(2),
+                    (pl.col("PctChange1D") * 100).round(2),
+                    (pl.col("PctChange5D") * 100).round(2),
+                    pl.col("Volume").fill_null(0)
+                ])
+                return [list(row) for row in res.iter_rows()]
+
+            drill_yr[d_str] = {
+                "up45": extract_tuples(sub.filter(pl.col("PctChange1D") >= 0.045), "PctChange1D", True),
+                "down45": extract_tuples(sub.filter(pl.col("PctChange1D") <= -0.045), "PctChange1D", False),
+                "up20_5d": extract_tuples(sub.filter(pl.col("PctChange5D") >= 0.20), "PctChange5D", True),
+                "down20_5d": extract_tuples(sub.filter(pl.col("PctChange5D") <= -0.20), "PctChange5D", False),
+                "high52w": extract_tuples(sub.filter(pl.col("IsNew52W_High")), "PctChange1D", True),
+                "low52w": extract_tuples(sub.filter(pl.col("IsNew52W_Low")), "PctChange1D", False),
+            }
+            
+        json_content = json.dumps(drill_yr, separators=(',', ':'))
+        
+        file_name = f"{yr}.json"
+        data_path = os.path.join(data_drilldown_dir, file_name)
+        web_path = os.path.join(web_drilldown_dir, file_name)
+        
+        with open(data_path, "w") as f:
+            f.write(json_content)
+        with open(web_path, "w") as f:
+            f.write(json_content)
+            
+    print(f"Generated drilldown files for {len(years)} years ({years[0]}-{years[-1]}).")
+
 def main():
     # Input is a directory (Partitioned Parquet)
     # DuckDB handles partitioned reads and schema merging natively
@@ -196,6 +257,14 @@ def main():
     
     # 2. Aggregates
     df_agg = calculate_breadth_aggregates(df_ind)
+    
+    # 3. Drilldowns (Enriched Annual Partitioned JSONs with Sector Clusters & Setups)
+    try:
+        from enrich_sector_setups import generate_enriched_drilldowns
+        generate_enriched_drilldowns()
+    except Exception as e:
+        print(f"Fallback to base drilldowns: {e}")
+        generate_annual_drilldowns(df_ind)
     
     # Save Parquet
     print(f"Saving metrics to {OUTPUT_FILE}...")
