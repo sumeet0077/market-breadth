@@ -15,21 +15,43 @@ os.makedirs(DATA_DIR, exist_ok=True)
 existing_files_count = len([name for name in os.listdir(DATA_DIR) if name.endswith(".csv")])
 MIN_HISTORY_FILES = 400 # ~1.5 years of data
 
+def get_latest_parquet_date():
+    try:
+        import duckdb
+        parquet_dir = "data/parquet/master_copy.parquet"
+        if os.path.exists(parquet_dir):
+            con = duckdb.connect()
+            res = con.execute("SELECT max(trade_date) FROM 'data/parquet/master_copy.parquet'").fetchone()
+            if res and res[0]:
+                if isinstance(res[0], str):
+                    return datetime.strptime(res[0], "%Y-%m-%d")
+                elif hasattr(res[0], "year"):
+                    return datetime(res[0].year, res[0].month, res[0].day)
+    except Exception as e:
+        print(f"Could not read parquet max date: {e}")
+    return None
+
+latest_parquet_date = get_latest_parquet_date()
 LOOKBACK_DAYS = os.getenv("LOOKBACK_DAYS")
 
 if LOOKBACK_DAYS:
     try:
         days = int(LOOKBACK_DAYS)
         START_DATE = datetime.now() - timedelta(days=days)
-        print(f"Incremental Mode: Fetching last {days} days (Start: {START_DATE.date()})")
+        if latest_parquet_date and latest_parquet_date < START_DATE:
+            print(f"⚠️ Parquet max date ({latest_parquet_date.date()}) is older than LOOKBACK_DAYS ({days}d). Adjusting start date to bridge gap...")
+            START_DATE = latest_parquet_date - timedelta(days=3)
+        print(f"Incremental Mode: Fetching from {START_DATE.date()} to {datetime.now().date()}")
     except ValueError:
-        print("Invalid LOOKBACK_DAYS, defaulting to full rebuild check.")
         START_DATE = datetime(2021, 1, 1)
+elif latest_parquet_date:
+    START_DATE = latest_parquet_date - timedelta(days=5)
+    print(f"Smart Incremental Mode (from Parquet Max): Fetching from {START_DATE.date()}")
 elif existing_files_count < MIN_HISTORY_FILES:
     print(f"⚠️ Insufficient history detected ({existing_files_count} files). Forcing Full Rebuild...")
     START_DATE = datetime(2021, 1, 1) 
 else:
-    START_DATE = datetime.now() - timedelta(days=365*4) # Full rebuild fallback
+    START_DATE = datetime.now() - timedelta(days=365*4)
     print(f"Full Rebuild Mode: Fetching history from {START_DATE.date()}")
 
 END_DATE = datetime.now()
