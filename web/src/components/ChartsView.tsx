@@ -1,31 +1,103 @@
 "use client"
 
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, ReferenceDot, Brush } from 'recharts';
-import { METRIC_CONFIG, MarketData } from './Heatmap';
-import { ArrowLeft, Calendar, Maximize2, X, ZoomIn, ZoomOut, RotateCcw, ArrowRight } from 'lucide-react';
+import { METRIC_CONFIG, MarketData, DRILLDOWN_METRICS } from './Heatmap';
+import { DrilldownModal, DrilldownCategory, YearDrilldownMap } from './DrilldownModal';
+import { ArrowLeft, Calendar, Maximize2, X, ZoomIn, ZoomOut, RotateCcw, ArrowRight, Layers } from 'lucide-react';
 import Link from 'next/link';
 
 interface ChartsViewProps {
     initialData: MarketData[];
+    hideHeader?: boolean;
 }
 
-export function ChartsView({ initialData }: ChartsViewProps) {
-    // 1. Data Prep & Range Calculation (Same as DashboardClient)
+export function ChartsView({ initialData, hideHeader }: ChartsViewProps) {
+    // 1. Data Prep & Range Calculation
     const allSorted = useMemo(() =>
-        [...initialData].sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime()), // Descending for calculations
+        [...initialData].sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime()),
         [initialData]);
 
     const maxDate = allSorted[0]?.Date || new Date().toISOString().split('T')[0];
-    const minDate = allSorted[allSorted.length - 1]?.Date || "2022-01-01";
+    const minDate = allSorted[allSorted.length - 1]?.Date || "2014-06-02";
 
-    // Default to FULL range
-    const defaultStart = minDate;
+    // Default to 1 Year for high performance (< 100ms load time)
+    const defaultStart = useMemo(() => {
+        const d = new Date(maxDate);
+        d.setFullYear(d.getFullYear() - 1);
+        const calcStart = d.toISOString().split('T')[0];
+        return calcStart >= minDate ? calcStart : minDate;
+    }, [maxDate, minDate]);
 
     // 2. State
     const [startDate, setStartDate] = useState(defaultStart);
     const [endDate, setEndDate] = useState(maxDate);
     const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
+
+    // Quick timeframe presets
+    const handleSetTimeframe = (preset: '6M' | '1Y' | '3Y' | '5Y' | 'ALL') => {
+        const end = new Date(maxDate);
+        setEndDate(maxDate);
+        if (preset === 'ALL') {
+            setStartDate(minDate);
+            return;
+        }
+        const start = new Date(maxDate);
+        if (preset === '6M') start.setMonth(start.getMonth() - 6);
+        if (preset === '1Y') start.setFullYear(start.getFullYear() - 1);
+        if (preset === '3Y') start.setFullYear(start.getFullYear() - 3);
+        if (preset === '5Y') start.setFullYear(start.getFullYear() - 5);
+
+        const strStart = start.toISOString().split('T')[0];
+        setStartDate(strStart >= minDate ? strStart : minDate);
+    };
+
+    // Drilldown State
+    const [drilldownState, setDrilldownState] = useState<{
+        isOpen: boolean;
+        date: string;
+        category: DrilldownCategory;
+    }>({
+        isOpen: false,
+        date: '',
+        category: 'up45'
+    });
+
+    const [yearCache, setYearCache] = useState<Record<string, YearDrilldownMap>>({});
+    const [isDrilldownLoading, setIsDrilldownLoading] = useState(false);
+
+    const openDrilldown = useCallback(async (date: string, category: DrilldownCategory) => {
+        setDrilldownState({ isOpen: true, date, category });
+        
+        const year = date.split('-')[0];
+        if (!yearCache[year]) {
+            setIsDrilldownLoading(true);
+            try {
+                const res = await fetch(`/drilldowns/${year}.json?v=${Date.now()}`, { cache: 'no-store' });
+                if (res.ok) {
+                    const json: YearDrilldownMap = await res.json();
+                    setYearCache(prev => ({ ...prev, [year]: json }));
+                }
+            } catch (err) {
+                console.error(`Failed to load drilldown data for ${year}:`, err);
+            } finally {
+                setIsDrilldownLoading(false);
+            }
+        }
+    }, [yearCache]);
+
+    const handleDrilldownNavigateDate = useCallback((newDate: string) => {
+        openDrilldown(newDate, drilldownState.category);
+    }, [openDrilldown, drilldownState.category]);
+
+    const closeDrilldown = useCallback(() => {
+        setDrilldownState(prev => ({ ...prev, isOpen: false }));
+    }, []);
+
+    const allAvailableDates = useMemo(() => initialData.map(d => d.Date), [initialData]);
+
+    const currentYear = drilldownState.date ? drilldownState.date.split('-')[0] : '';
+    const currentDayData = (currentYear && yearCache[currentYear]?.[drilldownState.date]) || null;
 
     // 3. Filter Data
     const filteredData = useMemo(() => {
@@ -45,62 +117,196 @@ export function ChartsView({ initialData }: ChartsViewProps) {
 
     // 4. Reset Handler
     const handleReset = () => {
-        setStartDate(minDate);
+        setStartDate(defaultStart);
         setEndDate(maxDate);
-    }
+    };
 
     const metrics = Object.keys(METRIC_CONFIG);
 
     return (
         <div className="space-y-6">
             {/* Header / Controls */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/50 p-4 rounded-xl border border-slate-800 backdrop-blur-sm sticky top-4 z-40 shadow-xl">
-                <div className="flex items-center gap-4">
-                    <Link href="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors group">
-                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                        <span className="font-medium">Back</span>
-                    </Link>
-                    <div className="h-6 w-px bg-slate-800" />
-                    <h2 className="text-slate-200 font-semibold hidden md:block">Time Series</h2>
-                </div>
+            {!hideHeader ? (
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-900 p-3 px-4 rounded-2xl border border-slate-800 sticky top-3 z-40 shadow-xl">
+                    {/* Left: Brand Identity + Navigation Tabs */}
+                    <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center font-black text-white text-xs shadow-md shadow-cyan-500/20 font-mono">
+                                QB
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-base font-extrabold tracking-tight bg-gradient-to-r from-slate-100 via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                                    QuantBreadth<span className="text-cyan-400">™</span>
+                                </span>
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/90 text-indigo-300 border border-indigo-800/80 font-bold">
+                                    PRO
+                                </span>
+                            </div>
+                        </div>
 
-                {/* Date Controls (Matching Page 1 Style) */}
-                <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Start Date</label>
-                        <input
-                            type="date"
-                            value={startDate}
-                            min={minDate}
-                            max={maxDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            onClick={(e) => e.currentTarget.showPicker()}
-                            className="bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-sm text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:border-slate-700 transition-colors"
-                        />
+                        <div className="h-5 w-px bg-slate-800 hidden sm:block" />
+
+                        {/* Navigation Tabs */}
+                        <nav className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800/90">
+                            <Link
+                                href="/"
+                                className="px-3 py-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                            >
+                                <Layers className="w-3.5 h-3.5" />
+                                <span>Breadth Heatmap</span>
+                            </Link>
+
+                            <div className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5">
+                                <LineChart className="w-3.5 h-3.5" />
+                                <span>Charts Studio</span>
+                            </div>
+                        </nav>
                     </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">End Date</label>
-                        <input
-                            type="date"
-                            value={endDate}
-                            min={minDate}
-                            max={maxDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            onClick={(e) => e.currentTarget.showPicker()}
-                            className="bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-sm text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:border-slate-700 transition-colors"
-                        />
+
+                    {/* Right: Timeframe Presets, Date Pickers & Reset */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        {/* Timeframe Presets */}
+                        <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+                            {(['1M', '3M', '6M', 'YTD', '1Y', '3Y', 'ALL'] as const).map((preset) => (
+                                <button
+                                    key={preset}
+                                    onClick={() => {
+                                        if (preset === '1M') {
+                                            const end = new Date(maxDate);
+                                            end.setMonth(end.getMonth() - 1);
+                                            setStartDate(end.toISOString().split('T')[0]);
+                                            setEndDate(maxDate);
+                                        } else if (preset === '3M') {
+                                            const end = new Date(maxDate);
+                                            end.setMonth(end.getMonth() - 3);
+                                            setStartDate(end.toISOString().split('T')[0]);
+                                            setEndDate(maxDate);
+                                        } else if (preset === 'YTD') {
+                                            const y = new Date(maxDate).getFullYear();
+                                            setStartDate(`${y}-01-01`);
+                                            setEndDate(maxDate);
+                                        } else {
+                                            handleSetTimeframe(preset as any);
+                                        }
+                                    }}
+                                    className="px-2 py-1 rounded font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                                >
+                                    {preset}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Date Inputs */}
+                        <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 text-xs font-mono">
+                            <input
+                                type="date"
+                                value={startDate}
+                                min={minDate}
+                                max={maxDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                onClick={(e) => e.currentTarget.showPicker()}
+                                className="bg-transparent text-slate-200 text-xs focus:outline-none cursor-pointer w-24"
+                            />
+                            <span className="text-slate-600 text-xs">→</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                min={minDate}
+                                max={maxDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                onClick={(e) => e.currentTarget.showPicker()}
+                                className="bg-transparent text-slate-200 text-xs focus:outline-none cursor-pointer w-24"
+                            />
+                        </div>
+
+                        {/* Reset Button */}
+                        <button
+                            onClick={handleReset}
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg transition-colors flex items-center gap-1 border border-slate-700 cursor-pointer"
+                            title="Reset Date Range to 1Y"
+                        >
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>Reset</span>
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-3 px-4.5 rounded-2xl border border-slate-800 shadow-xl">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                            <LineChart className="w-4 h-4 text-emerald-400" />
+                            <span>Synchronized Breadth Studio ({filteredData.length} sessions)</span>
+                        </span>
                     </div>
 
-                    <button
-                        onClick={handleReset}
-                        className="md:mt-5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded transition-colors flex items-center gap-2"
-                        title="Reset Date Range"
-                    >
-                        <Calendar className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        {/* Timeframe Presets */}
+                        <div className="flex items-center bg-slate-950 p-0.5 rounded-xl border border-slate-800 text-xs">
+                            {(['1M', '3M', '6M', 'YTD', '1Y', '3Y', 'ALL'] as const).map((preset) => (
+                                <button
+                                    key={preset}
+                                    onClick={() => {
+                                        if (preset === '1M') {
+                                            const end = new Date(maxDate);
+                                            end.setMonth(end.getMonth() - 1);
+                                            setStartDate(end.toISOString().split('T')[0]);
+                                            setEndDate(maxDate);
+                                        } else if (preset === '3M') {
+                                            const end = new Date(maxDate);
+                                            end.setMonth(end.getMonth() - 3);
+                                            setStartDate(end.toISOString().split('T')[0]);
+                                            setEndDate(maxDate);
+                                        } else if (preset === 'YTD') {
+                                            const y = new Date(maxDate).getFullYear();
+                                            setStartDate(`${y}-01-01`);
+                                            setEndDate(maxDate);
+                                        } else {
+                                            handleSetTimeframe(preset as any);
+                                        }
+                                    }}
+                                    className="px-3 py-1 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-850 transition-all cursor-pointer"
+                                >
+                                    {preset}
+                                </button>
+                            ))}
+                        </div>
 
+                        {/* Date Inputs */}
+                        <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-mono">
+                            <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                            <input
+                                type="date"
+                                value={startDate}
+                                min={minDate}
+                                max={maxDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                onClick={(e) => e.currentTarget.showPicker()}
+                                className="bg-transparent text-slate-200 text-xs focus:outline-none cursor-pointer w-24"
+                            />
+                            <span className="text-slate-600 text-xs">→</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                min={minDate}
+                                max={maxDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                onClick={(e) => e.currentTarget.showPicker()}
+                                className="bg-transparent text-slate-200 text-xs focus:outline-none cursor-pointer w-24"
+                            />
+                        </div>
+
+                        {/* Reset Button */}
+                        <button
+                            onClick={handleReset}
+                            className="px-3 py-1.5 bg-slate-950 hover:bg-slate-850 text-slate-300 text-xs font-medium rounded-xl transition-colors flex items-center gap-1.5 border border-slate-800 cursor-pointer"
+                            title="Reset Date Range to 1Y"
+                        >
+                            <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Reset</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Charts Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -110,41 +316,105 @@ export function ChartsView({ initialData }: ChartsViewProps) {
                         metric={metric}
                         data={filteredData}
                         onExpand={() => setExpandedMetric(metric)}
+                        onDrilldown={openDrilldown}
                     />
                 ))}
             </div>
 
             {/* Expanded Modal */}
             {expandedMetric && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-[95vw] h-[90vh] flex flex-col shadow-2xl overflow-hidden relative">
-                        {/* Close Button */}
-                        <button
-                            onClick={() => setExpandedMetric(null)}
-                            className="absolute top-4 right-4 p-2 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white rounded-full transition-colors z-10"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-
-                        <div className="p-6 md:p-8 flex-1 min-h-0">
-                            <ChartCard
-                                metric={expandedMetric}
-                                data={filteredData}
-                                isExpanded={true}
-                            />
-                        </div>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 overscroll-contain">
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl w-[95vw] h-[90vh] flex flex-col shadow-2xl overflow-hidden relative p-6 md:p-8 transform-gpu">
+                        <ChartCard
+                            metric={expandedMetric}
+                            data={filteredData}
+                            isExpanded={true}
+                            onDrilldown={openDrilldown}
+                            onClose={() => setExpandedMetric(null)}
+                        />
                     </div>
                     <div className="absolute inset-0 -z-10" onClick={() => setExpandedMetric(null)} />
                 </div>
             )}
+
+            {/* Drilldown Modal */}
+            <DrilldownModal
+                isOpen={drilldownState.isOpen}
+                onClose={closeDrilldown}
+                date={drilldownState.date}
+                category={drilldownState.category}
+                availableDates={allAvailableDates}
+                onNavigateDate={handleDrilldownNavigateDate}
+                data={currentDayData}
+                isLoading={isDrilldownLoading}
+            />
         </div>
     );
 }
 
-function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: string, data: MarketData[], onExpand?: () => void, isExpanded?: boolean }) {
+// Fast peak-and-signal preserving decimation for instant grid rendering
+function decimateChartData<T extends { Date: string; Value: number; BuySignal?: boolean; SellSignal?: boolean }>(
+    data: T[], 
+    targetPoints: number = 220
+): T[] {
+    if (data.length <= targetPoints) return data;
+    
+    const step = Math.ceil(data.length / targetPoints);
+    const sampled: T[] = [];
+    
+    sampled.push(data[0]);
+    
+    for (let i = 1; i < data.length - 1; i += step) {
+        const bucket = data.slice(i, Math.min(i + step, data.length - 1));
+        if (bucket.length === 0) continue;
+        
+        let minPt = bucket[0];
+        let maxPt = bucket[0];
+        const signals: T[] = [];
+        
+        for (const pt of bucket) {
+            if (pt.Value < minPt.Value) minPt = pt;
+            if (pt.Value > maxPt.Value) maxPt = pt;
+            if (pt.BuySignal || pt.SellSignal) signals.push(pt);
+        }
+        
+        const candidates = [minPt, maxPt, ...signals].sort((a, b) => 
+            new Date(a.Date).getTime() - new Date(b.Date).getTime()
+        );
+        
+        for (const cand of candidates) {
+            if (sampled[sampled.length - 1].Date !== cand.Date) {
+                sampled.push(cand);
+            }
+        }
+    }
+    
+    if (sampled[sampled.length - 1].Date !== data[data.length - 1].Date) {
+        sampled.push(data[data.length - 1]);
+    }
+    
+    return sampled;
+}
+
+function ChartCardComponent({ 
+    metric, 
+    data, 
+    onExpand, 
+    isExpanded = false,
+    onDrilldown,
+    onClose
+}: { 
+    metric: string, 
+    data: MarketData[], 
+    onExpand?: () => void, 
+    isExpanded?: boolean,
+    onDrilldown?: (date: string, category: DrilldownCategory) => void,
+    onClose?: () => void
+}) {
     const isRatio = metric === "Advance/Decline Ratio";
     const isNetNewHighs = metric === "Net New Highs";
     const config = METRIC_CONFIG[metric];
+    const drillCategory = DRILLDOWN_METRICS[metric];
 
     // Per-chart signal column mapping
     const signalMap: Record<string, { buy: string, sell: string, prob: string }> = {
@@ -156,11 +426,9 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     const signals = signalMap[metric];
 
     // Process data for this chart
-    const chartData = useMemo(() => {
+    const rawChartData = useMemo(() => {
         return data.map(d => {
             const rawVal = d[metric];
-            // If it's the Ratio, keep raw. 
-            // If it's anything else, convert to % of TotalTraded.
             let val = rawVal;
 
             if (!isRatio && d.TotalTraded) {
@@ -185,6 +453,12 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
             };
         });
     }, [data, metric, isRatio, signals]);
+
+    // Apply decimation for small grid cards to make rendering lightning-fast (<50ms)
+    const chartData = useMemo(() => {
+        if (isExpanded) return rawChartData;
+        return decimateChartData(rawChartData, 350);
+    }, [rawChartData, isExpanded]);
 
     const title = isRatio ? metric : `${metric} (%)`;
     const color = config.type === 'bad' ? '#ef4444' : '#22c55e';
@@ -435,36 +709,83 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
     }, []);
 
     return (
-        <div className={`bg-slate-900 border border-slate-800 rounded-xl shadow-lg flex flex-col ${isExpanded ? 'h-full border-none shadow-none bg-transparent' : 'h-[300px] p-4'}`}>
-            <div className="flex items-center justify-between mb-4 px-1">
-                {/* Title and Controls */}
-                <div className="flex items-center gap-4">
-                    <h3 className={`font-medium text-slate-200 truncate pr-4 ${isExpanded ? 'text-xl md:text-2xl' : 'text-sm'}`} title={title}>
+        <div className={`bg-slate-900 border border-slate-800/90 rounded-xl shadow-lg flex flex-col transition-colors hover:border-slate-700/80 ${isExpanded ? 'h-full border-none shadow-none bg-transparent p-0' : 'h-[320px] p-4'}`}>
+            {/* Header: Title on Left, Actions on Right */}
+            <div className={`flex items-center justify-between gap-4 flex-shrink-0 ${isExpanded ? 'mb-4 pb-3 border-b border-slate-800/80 h-10' : 'mb-3 h-7'}`}>
+                {/* Title and Zoom Controls */}
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                    <h3 className={`font-semibold text-slate-100 truncate ${isExpanded ? 'text-lg md:text-xl' : 'text-xs md:text-sm'}`} title={title}>
                         {title}
                     </h3>
 
                     {/* Zoom Controls (Visible only when Expanded) */}
                     {isExpanded && (
-                        <div className="flex items-center gap-1 bg-slate-800 rounded-lg p-1 border border-slate-700">
-                            <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Zoom In"><ZoomIn className="w-4 h-4" /></button>
-                            <button onClick={handleZoomOut} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Zoom Out"><ZoomOut className="w-4 h-4" /></button>
-                            <div className="w-px h-4 bg-slate-700 mx-1" />
-                            <button onClick={() => handlePan('left')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Pan Left"><ArrowLeft className="w-4 h-4" /></button>
-                            <button onClick={() => handlePan('right')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Pan Right"><ArrowRight className="w-4 h-4" /></button>
-                            <div className="w-px h-4 bg-slate-700 mx-1" />
-                            <button onClick={handleResetZoom} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Reset Scale"><RotateCcw className="w-4 h-4" /></button>
+                        <div className="flex items-center gap-1 bg-slate-950/90 rounded-lg p-1 border border-slate-800 shadow-inner">
+                            <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-800 rounded text-slate-300 transition-colors" title="Zoom In"><ZoomIn className="w-4 h-4" /></button>
+                            <button onClick={handleZoomOut} className="p-1.5 hover:bg-slate-800 rounded text-slate-300 transition-colors" title="Zoom Out"><ZoomOut className="w-4 h-4" /></button>
+                            <div className="w-px h-4 bg-slate-800 mx-1" />
+                            <button onClick={() => handlePan('left')} className="p-1.5 hover:bg-slate-800 rounded text-slate-300 transition-colors" title="Pan Left"><ArrowLeft className="w-4 h-4" /></button>
+                            <button onClick={() => handlePan('right')} className="p-1.5 hover:bg-slate-800 rounded text-slate-300 transition-colors" title="Pan Right"><ArrowRight className="w-4 h-4" /></button>
+                            <div className="w-px h-4 bg-slate-800 mx-1" />
+                            <button onClick={handleResetZoom} className="p-1.5 hover:bg-slate-800 rounded text-slate-300 transition-colors" title="Reset Scale"><RotateCcw className="w-4 h-4" /></button>
                         </div>
                     )}
                 </div>
 
-                {!isExpanded && (
-                    <button
-                        onClick={onExpand}
-                        className="text-slate-500 hover:text-blue-400 transition-colors p-1"
-                        title="Expand Chart"
-                    >
-                        <Maximize2 className="w-4 h-4" />
-                    </button>
+                {/* Actions: Clean Full-Bar when Expanded, Dock when Grid */}
+                {isExpanded ? (
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                        {drillCategory && onDrilldown && (
+                            <button
+                                onClick={() => {
+                                    const latest = chartData[chartData.length - 1]?.Date;
+                                    if (latest) onDrilldown(latest, drillCategory);
+                                }}
+                                className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 border border-slate-700/80 shadow-sm transition-colors"
+                                title={`View constituent stocks for ${metric}`}
+                            >
+                                <Layers className="w-4 h-4 text-cyan-400" />
+                                <span>Constituent Stocks</span>
+                            </button>
+                        )}
+
+                        {onClose && (
+                            <button
+                                onClick={onClose}
+                                className="p-1.5 bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors border border-slate-700/80 shadow-sm"
+                                title="Close Fullscreen (Esc)"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex items-center bg-slate-950/80 border border-slate-800/90 rounded-lg p-0.5 shadow-sm flex-shrink-0">
+                        {drillCategory && onDrilldown && (
+                            <button
+                                onClick={() => {
+                                    const latest = chartData[chartData.length - 1]?.Date;
+                                    if (latest) onDrilldown(latest, drillCategory);
+                                }}
+                                className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-cyan-300 hover:bg-slate-800/80 transition-all"
+                                title={`View Constituent Stocks (${metric})`}
+                            >
+                                <Layers className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+
+                        {drillCategory && onDrilldown && (
+                            <div className="w-px h-3.5 bg-slate-800/80 my-auto" />
+                        )}
+
+                        <button
+                            onClick={onExpand}
+                            className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-blue-300 hover:bg-slate-800/80 transition-all"
+                            title="Expand to Fullscreen"
+                        >
+                            <Maximize2 className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -477,7 +798,17 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                 onMouseLeave={handleMouseLeave}
             >
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
+                    <LineChart 
+                        data={chartData}
+                        onClick={(e: any) => {
+                            if (e && e.activePayload && e.activePayload.length > 0) {
+                                const payloadDate = e.activePayload[0].payload.Date;
+                                if (payloadDate && drillCategory && onDrilldown) {
+                                    onDrilldown(payloadDate, drillCategory);
+                                }
+                            }
+                        }}
+                    >
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
 
                         {isDiverging && (
@@ -535,11 +866,10 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
 
                                 return [
                                     label,
-                                    isRatio ? "Ratio" : "Percentage"
+                                    title
                                 ];
                             }}
                             labelFormatter={(label) => {
-                                if (!label) return '';
                                 return new Date(label).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
                             }}
                         />
@@ -549,6 +879,7 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                             stroke={isDiverging ? `url(#${gradientId})` : color}
                             strokeWidth={isExpanded ? 3 : 2}
                             dot={false}
+                            isAnimationActive={false}
                             activeDot={isDiverging
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 ? (props: any) => <circle cx={props.cx} cy={props.cy} r={isExpanded ? 6 : 4} fill={props.payload.Value >= threshold ? "#22c55e" : "#ef4444"} />
@@ -657,5 +988,7 @@ function ChartCard({ metric, data, onExpand, isExpanded = false }: { metric: str
                 </ResponsiveContainer>
             </div>
         </div>
-    )
+    );
 }
+
+const ChartCard = React.memo(ChartCardComponent);
