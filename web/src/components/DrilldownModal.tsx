@@ -486,6 +486,13 @@ export function DrilldownModal({
         } else {
           onClose();
         }
+        return;
+      }
+
+      // If any modifier key (Cmd, Ctrl, Alt) is pressed, do NOT intercept single-key shortcuts
+      // so native browser shortcuts (Cmd+R, Cmd+Shift+R, Cmd+C, Cmd+A, etc.) work normally!
+      if (e.metaKey || e.ctrlKey || e.altKey) {
+        return;
       } else if (e.key === 'ArrowLeft' || e.key === '[') {
         handlePrevDay();
       } else if (e.key === 'ArrowRight' || e.key === ']') {

@@ -441,7 +441,16 @@ export function DashboardClient({ initialData, initialTab }: DashboardClientProp
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsCommandOpen((prev) => !prev);
-      } else if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+        return;
+      }
+
+      // If any modifier key (Cmd, Ctrl, Alt) is pressed, do NOT intercept single-key shortcuts
+      // so native browser shortcuts (Cmd+R, Cmd+Shift+R, Cmd+C, Cmd+A, etc.) work normally!
+      if (e.metaKey || e.ctrlKey || e.altKey) {
+        return;
+      }
+
+      if (e.key === "?" || (e.shiftKey && e.key === "/")) {
         e.preventDefault();
         setIsShortcutsOpen((prev) => !prev);
       } else if (e.key === "Escape") {
