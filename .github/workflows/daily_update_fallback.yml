@@ -1,11 +1,11 @@
-name: Daily Data Update (Primary)
+name: Daily Data Update (Fallback Watchdog)
 
 on:
   schedule:
-    # Primary Schedule: Run every 20 minutes on (:14, :34, :54)
+    # Secondary Redundant Schedule: Run every 20 minutes on (:04, :24, :44)
     # between 11:00 UTC (16:30 IST) and 18:00 UTC (23:30 IST) Monday to Friday.
-    # Non-round minutes bypass GitHub Actions top-of-hour scheduler queue bottlenecks.
-    - cron: '14,34,54 11-17 * * 1-5'
+    # Offset by 10 minutes from Primary to guarantee continuous coverage even if GitHub delays one queue.
+    - cron: '04,24,44 11-17 * * 1-5'
   repository_dispatch:
     types: [daily_data_update, manual_ping, watchdog_trigger]
   workflow_dispatch: # Allow manual 1-click trigger
@@ -154,7 +154,7 @@ jobs:
               repo: context.repo.repo,
               title: title,
               body: [
-                '## Daily Data Pipeline Failed',
+                '## Daily Data Pipeline Failed (Fallback Watchdog)',
                 '',
                 `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
                 `**Triggered at:** ${new Date().toISOString()}`,
