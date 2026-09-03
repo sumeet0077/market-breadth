@@ -360,8 +360,67 @@ def validate_pipeline_data():
     else:
         print("✅ Invariant 4: Corporate action split integrity (POCL, GOODLUCK, ANGELONE + registry): 100% CLEAN")
 
+    # ----------------------------------------------------
+    # 8. STRICT INVARIANT 5: Zero ETF & Rights Entitlement Leakage Guardrail
+    # ----------------------------------------------------
+    print("\n🔍 Invariant 5: Auditing Zero ETF & Rights Entitlement (-RE) Leakage...")
+    try:
+        from etf_util import is_etf_or_re, load_etf_symbols, get_protected_whitelist
+    except ImportError:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        if base_dir not in sys.path:
+            sys.path.append(base_dir)
+        from etf_util import is_etf_or_re, load_etf_symbols, get_protected_whitelist
+
+    canonical_etfs = load_etf_symbols()
+    probe_etfs = {
+        "NIFTYBEES", "GOLDBEES", "BANKBEES", "ABSLLIQUID", "LIQUIDBEES", "SILVERBEES",
+        "CPSEETF", "ICICIB22", "AUTOBEES", "COMMOIETF",
+        "ISENSEX", "RELBANK", "RELCNX100", "RELCONS", "RELDIVOPP", "RELIGAREGO",
+        "M100", "M50", "N100", "MANXT50", "MANV30F", "EQ30",
+        "BHARATIWIN", "LOWVOLIWIN", "MASILVER", "KOTAKLIQ", "ICICI10GS", "ICICICOMMO", "ICICIQTY30"
+    }
+    probe_whitelist = [
+        "SKYGOLD", "GOLDIAM", "SILVERTUC", "EUROBOND", "CHEMBOND", "PNBGILTS",
+        "BHARATFORG", "JETFREIGHT", "CHEMBONDCH", "DECNGOLD", "SBIFUNDS", "GROWW",
+        "MUTHOOTMF", "JMFINANCIL", "EDELWEISS"
+    ]
+
+    # Verify whitelist precedence immunity
+    for sym in probe_whitelist:
+        if is_etf_or_re(sym):
+            print(f"  ❌ FATAL: Whitelisted equity '{sym}' was erroneously classified as ETF/RE!")
+            sys.exit(1)
+
+    etf_leak_errors = 0
+    checked_sessions = 0
+
+    for yr, yr_data in annual_drilldowns.items():
+        for d_str, session_data in yr_data.items():
+            checked_sessions += 1
+            # Check standard tuple drilldown lists
+            for list_name in ["high52w", "low52w", "up45", "down45", "up20_5d", "down20_5d"]:
+                for row in session_data.get(list_name, []):
+                    sym = row[0]
+                    if is_etf_or_re(sym) or sym in probe_etfs:
+                        print(f"  ❌ ETF/RE Leakage: '{sym}' appeared in {list_name} on session {d_str}")
+                        etf_leak_errors += 1
+
+            # Check top_setups dictionaries
+            for s_dict in session_data.get("top_setups", []):
+                sym = s_dict.get("symbol") or s_dict.get("Symbol")
+                if sym and (is_etf_or_re(sym) or sym in probe_etfs):
+                    print(f"  ❌ ETF/RE Leakage: '{sym}' appeared in top_setups on session {d_str}")
+                    etf_leak_errors += 1
+
+    if etf_leak_errors > 0:
+        print(f"\n❌ FAILED: {etf_leak_errors} ETF/RE leakage violations detected across {checked_sessions} sessions.")
+        sys.exit(1)
+    else:
+        print(f"✅ Invariant 5: Zero ETF & Rights Entitlement (-RE) leakage across {checked_sessions} sessions: 100% CLEAN")
+
     print("\n==================================================")
-    print("🎉 ALL 4 STRICT INVARIANT TIERS PASSED! SAFE FOR PRODUCTION.")
+    print("🎉 ALL 5 STRICT INVARIANT TIERS PASSED! SAFE FOR PRODUCTION.")
     print("==================================================")
     sys.exit(0)
 

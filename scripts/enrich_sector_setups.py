@@ -249,8 +249,18 @@ def generate_enriched_drilldowns():
         sys.path.append(os.path.dirname(os.path.abspath(__file__)))
         from corporate_actions_util import register_corporate_actions_duckdb
     register_corporate_actions_duckdb(con)
+
+    # Register ETF exclusion table
+    try:
+        from etf_util import register_etf_filter_duckdb, get_etf_exclusion_sql_clause
+    except ImportError:
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from etf_util import register_etf_filter_duckdb, get_etf_exclusion_sql_clause
+    register_etf_filter_duckdb(con)
+    etf_clause = get_etf_exclusion_sql_clause("symbol")
     
-    query = """
+    query = f"""
     WITH raw_stocks AS (
         SELECT 
             symbol AS Symbol,
@@ -264,6 +274,7 @@ def generate_enriched_drilldowns():
             (close * volume) AS Turnover
         FROM read_parquet('data/parquet/**/*.parquet', union_by_name=true)
         WHERE series IN ('EQ', 'BE', 'BZ')
+          AND {etf_clause}
     ),
     deduped AS (
         SELECT *,

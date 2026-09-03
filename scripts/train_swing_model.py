@@ -39,6 +39,15 @@ def compute_ground_truth_targets(parquet_dir="data/parquet"):
         sys.path.append(os.path.dirname(os.path.abspath(__file__)))
         from corporate_actions_util import register_corporate_actions_duckdb
     register_corporate_actions_duckdb(con)
+
+    try:
+        from etf_util import register_etf_filter_duckdb, get_etf_exclusion_sql_clause
+    except ImportError:
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from etf_util import register_etf_filter_duckdb, get_etf_exclusion_sql_clause
+    register_etf_filter_duckdb(con)
+    etf_clause = get_etf_exclusion_sql_clause("symbol")
     
     query = f"""
     WITH raw_stocks AS (
@@ -51,6 +60,7 @@ def compute_ground_truth_targets(parquet_dir="data/parquet"):
             series
         FROM read_parquet('{parquet_dir}/**/*.parquet', union_by_name=true)
         WHERE series IN ('EQ', 'BE', 'BZ')
+          AND {etf_clause}
     ),
     deduped AS (
         SELECT *,

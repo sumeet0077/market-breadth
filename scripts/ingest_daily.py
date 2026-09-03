@@ -90,6 +90,15 @@ def ingest_single_file(con, daily_file):
                  shutil.copy2(original_master, local_master)
         
         # 5. Append to Local Master Copy
+        try:
+            from etf_util import register_etf_filter_duckdb, get_etf_exclusion_sql_clause
+        except ImportError:
+            import sys
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+            from etf_util import register_etf_filter_duckdb, get_etf_exclusion_sql_clause
+        register_etf_filter_duckdb(con)
+        etf_clause = get_etf_exclusion_sql_clause("TRIM(Symbol)")
+
         query_insert = f"""
             COPY (
                 SELECT 
@@ -112,6 +121,7 @@ def ingest_single_file(con, daily_file):
                     year(strptime(TRIM(DateStr), '%d-%b-%Y')) as year
                 FROM daily_source
                 WHERE TRIM(Series) IN ('EQ', 'BE')
+                  AND {etf_clause}
             ) TO '{local_master}' (FORMAT PARQUET, PARTITION_BY (year), FILENAME_PATTERN 'daily_{{uuid}}', OVERWRITE_OR_IGNORE 1)
         """
         
@@ -147,7 +157,17 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
 
     existing_keys = {(a['symbol'].strip().upper(), a['ex_date']) for a in existing_actions}
     
-    query = """
+    # Ensure ETF filter table is registered
+    try:
+        from etf_util import register_etf_filter_duckdb, get_etf_exclusion_sql_clause
+    except ImportError:
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from etf_util import register_etf_filter_duckdb, get_etf_exclusion_sql_clause
+    register_etf_filter_duckdb(con)
+    etf_clause = get_etf_exclusion_sql_clause("TRIM(Symbol)")
+
+    query = f"""
     WITH daily_candidates AS (
         SELECT 
             TRIM(Symbol) as symbol,
@@ -159,6 +179,7 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
             (Close / NULLIF(PrevClose, 0)) as drop_ratio
         FROM daily_source
         WHERE TRIM(Series) IN ('EQ', 'BE')
+          AND {etf_clause}
           AND PrevClose IS NOT NULL 
           AND PrevClose > 0
           AND (Close / NULLIF(PrevClose, 0)) <= 0.72
@@ -241,6 +262,16 @@ def ingest_daily(daily_file=None):
     (relying on idempotency to skip existing ones).
     """
     print("Starting Daily Ingestion...")
+
+    # Automated daily sync of ETF registry from NSE archives
+    try:
+        from etf_util import sync_etfs_from_nse
+    except ImportError:
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from etf_util import sync_etfs_from_nse
+    sync_etfs_from_nse(daily_file=daily_file)
+
     con = duckdb.connect(METRICS_DB)
     
     try:

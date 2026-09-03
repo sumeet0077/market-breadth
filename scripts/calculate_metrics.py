@@ -46,6 +46,15 @@ def calculate_stock_indicators(df):
         after_count = len(df)
         print(f"Filtered to EQ/BE/BZ series: {before_count} -> {after_count} rows ({before_count - after_count} non-equity removed)")
 
+    # Filter out ETFs and Rights Entitlements (-RE) using canonical registry and patterns
+    try:
+        from etf_util import filter_etfs_polars
+    except ImportError:
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from etf_util import filter_etfs_polars
+    df = filter_etfs_polars(df, symbol_col="Symbol")
+
     # Deduplicate: sort by Symbol, Date, Volume DESC so the primary series is retained if both EQ and BE exist
     before_dedup = len(df)
     if "Volume" in df.columns:
