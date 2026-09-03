@@ -1097,7 +1097,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 44.0,
+    "Swing_Score": 44.1,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.4396
   },
@@ -2083,7 +2083,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 39.7,
+    "Swing_Score": 39.8,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.3974
   },
@@ -2489,7 +2489,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 30.3,
+    "Swing_Score": 29.8,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.3026
   },
@@ -2547,7 +2547,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 65.4,
+    "Swing_Score": 65.6,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.6545
   },
@@ -4113,7 +4113,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 55.9,
+    "Swing_Score": 55.8,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.5595
   },
@@ -4635,7 +4635,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 9.3,
+    "Swing_Score": 9.1,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.0935
   },
@@ -5333,7 +5333,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 28.3,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.2832
+    "Swing_Prob_Followthrough": 0.2831
   },
   {
     "Date": "2015-05-26",
@@ -5853,9 +5853,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 44.7,
+    "Swing_Score": 44.1,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.4466
+    "Swing_Prob_Followthrough": 0.4409
   },
   {
     "Date": "2015-06-08",
@@ -6317,9 +6317,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 62.0,
+    "Swing_Score": 61.9,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.6197
+    "Swing_Prob_Followthrough": 0.6193
   },
   {
     "Date": "2015-06-18",
@@ -6377,7 +6377,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 66.0,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.6603
+    "Swing_Prob_Followthrough": 0.6598
   },
   {
     "Date": "2015-06-19",
@@ -10959,7 +10959,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 42.1,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.4211
+    "Swing_Prob_Followthrough": 0.421
   },
   {
     "Date": "2015-10-13",
@@ -33693,7 +33693,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 55.1,
+    "Swing_Score": 55.2,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.551
   },
@@ -33751,9 +33751,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 42.1,
+    "Swing_Score": 42.2,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.4215
+    "Swing_Prob_Followthrough": 0.4222
   },
   {
     "Date": "2017-05-18",
@@ -33809,7 +33809,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 12.2,
+    "Swing_Score": 12.1,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.1222
   },
@@ -34969,7 +34969,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 59.6,
+    "Swing_Score": 59.4,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.5955
   },
@@ -35491,9 +35491,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 65.6,
+    "Swing_Score": 65.5,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.6563
+    "Swing_Prob_Followthrough": 0.6554
   },
   {
     "Date": "2017-06-30",
@@ -35665,7 +35665,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 55.1,
+    "Swing_Score": 54.9,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.5511
   },
@@ -35839,9 +35839,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 64.5,
+    "Swing_Score": 64.1,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.6453
+    "Swing_Prob_Followthrough": 0.6412
   },
   {
     "Date": "2017-07-10",
@@ -40247,7 +40247,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 55.5,
+    "Swing_Score": 55.3,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.5552
   },
@@ -40305,9 +40305,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 75.7,
+    "Swing_Score": 75.6,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
-    "Swing_Prob_Followthrough": 0.7569
+    "Swing_Prob_Followthrough": 0.7564
   },
   {
     "Date": "2017-10-31",
@@ -40885,9 +40885,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 33.7,
+    "Swing_Score": 33.6,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.3367
+    "Swing_Prob_Followthrough": 0.336
   },
   {
     "Date": "2017-11-14",
@@ -41059,7 +41059,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 65.8,
+    "Swing_Score": 65.5,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.658
   },
@@ -44173,7 +44173,7 @@
     "OU_Stretch_Pct50D": -2.5071802253251585,
     "Bullseye_Buy": false,
     "Bullseye_Sell": false,
-    "Bullseye_Prob": 0.3,
+    "Bullseye_Prob": 0.1,
     "Bullseye_Buy_Signal": false,
     "Bullseye_Sell_Signal": false,
     "Buy_Reversal_Prob": 0.3,
@@ -44597,9 +44597,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 49.9,
+    "Swing_Score": 50.0,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.4994
+    "Swing_Prob_Followthrough": 0.4995
   },
   {
     "Date": "2018-02-15",
@@ -47905,7 +47905,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 15.1,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.1512
+    "Swing_Prob_Followthrough": 0.148
   },
   {
     "Date": "2018-05-11",
@@ -48175,10 +48175,10 @@
     "OU_Stretch_Pct50D": -0.8618710192086084,
     "Bullseye_Buy": false,
     "Bullseye_Sell": false,
-    "Bullseye_Prob": 0.5,
+    "Bullseye_Prob": 0.6,
     "Bullseye_Buy_Signal": false,
     "Bullseye_Sell_Signal": false,
-    "Buy_Reversal_Prob": 0.5,
+    "Buy_Reversal_Prob": 0.6,
     "Sell_Reversal_Prob": 0.0,
     "NNH_Pct": -0.09041591320072333,
     "OU_Stretch_NNH": -2.2025064325366803,
@@ -51789,9 +51789,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 19.1,
+    "Swing_Score": 19.0,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.1907
+    "Swing_Prob_Followthrough": 0.1897
   },
   {
     "Date": "2018-08-14",
@@ -51963,7 +51963,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 57.2,
+    "Swing_Score": 57.0,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.5725
   },
@@ -52833,9 +52833,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 21.5,
+    "Swing_Score": 21.4,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.2153
+    "Swing_Prob_Followthrough": 0.2137
   },
   {
     "Date": "2018-09-11",
@@ -52951,7 +52951,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 26.6,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.266
+    "Swing_Prob_Followthrough": 0.2669
   },
   {
     "Date": "2018-09-14",
@@ -67103,7 +67103,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 60.9,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.609
+    "Swing_Prob_Followthrough": 0.6091
   },
   {
     "Date": "2019-09-16",
@@ -67275,7 +67275,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 36.9,
+    "Swing_Score": 36.7,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.3694
   },
@@ -67449,7 +67449,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 75.5,
+    "Swing_Score": 75.4,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
     "Swing_Prob_Followthrough": 0.7549
   },
@@ -68089,7 +68089,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 27.5,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.2751
+    "Swing_Prob_Followthrough": 0.2752
   },
   {
     "Date": "2019-10-14",
@@ -68145,7 +68145,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 31.6,
+    "Swing_Score": 30.9,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.3162
   },
@@ -68435,7 +68435,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 35.4,
+    "Swing_Score": 35.2,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.3541
   },
@@ -68725,7 +68725,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 61.5,
+    "Swing_Score": 61.7,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.615
   },
@@ -68783,9 +68783,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 63.4,
+    "Swing_Score": 63.2,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.6341
+    "Swing_Prob_Followthrough": 0.6316
   },
   {
     "Date": "2019-10-31",
@@ -69595,7 +69595,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 37.3,
+    "Swing_Score": 37.5,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.3734
   },
@@ -70233,7 +70233,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 29.2,
+    "Swing_Score": 29.4,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.2917
   },
@@ -71045,7 +71045,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 43.1,
+    "Swing_Score": 43.0,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.4314
   },
@@ -79573,7 +79573,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 43.4,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.434
+    "Swing_Prob_Followthrough": 0.4338
   },
   {
     "Date": "2020-07-30",
@@ -83051,7 +83051,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 59.5,
+    "Swing_Score": 59.3,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.5952
   },
@@ -83399,7 +83399,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 48.7,
+    "Swing_Score": 48.6,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.4865
   },
@@ -83979,9 +83979,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 68.1,
+    "Swing_Score": 68.0,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.6807
+    "Swing_Prob_Followthrough": 0.6803
   },
   {
     "Date": "2020-11-14",
@@ -84791,9 +84791,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 71.7,
+    "Swing_Score": 71.9,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
-    "Swing_Prob_Followthrough": 0.7172
+    "Swing_Prob_Followthrough": 0.7187
   },
   {
     "Date": "2020-12-07",
@@ -84851,7 +84851,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 88.0,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
-    "Swing_Prob_Followthrough": 0.8799
+    "Swing_Prob_Followthrough": 0.8796
   },
   {
     "Date": "2020-12-08",
@@ -84965,9 +84965,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 79.7,
+    "Swing_Score": 79.8,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
-    "Swing_Prob_Followthrough": 0.7972
+    "Swing_Prob_Followthrough": 0.7982
   },
   {
     "Date": "2020-12-10",
@@ -86125,7 +86125,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 79.2,
+    "Swing_Score": 79.3,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
     "Swing_Prob_Followthrough": 0.7916
   },
@@ -86359,7 +86359,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 42.0,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.4199
+    "Swing_Prob_Followthrough": 0.42
   },
   {
     "Date": "2021-01-14",
@@ -86647,7 +86647,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 70.9,
+    "Swing_Score": 71.1,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
     "Swing_Prob_Followthrough": 0.7089
   },
@@ -87053,7 +87053,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 77.0,
+    "Swing_Score": 77.1,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
     "Swing_Prob_Followthrough": 0.7699
   },
@@ -89721,9 +89721,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 62.8,
+    "Swing_Score": 63.0,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.6283
+    "Swing_Prob_Followthrough": 0.6296
   },
   {
     "Date": "2021-04-12",
@@ -113385,9 +113385,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 72.0,
+    "Swing_Score": 72.1,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
-    "Swing_Prob_Followthrough": 0.7196
+    "Swing_Prob_Followthrough": 0.7205
   },
   {
     "Date": "2022-12-02",
@@ -120983,7 +120983,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 68.1,
+    "Swing_Score": 68.2,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.6808
   },
@@ -128871,9 +128871,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 59.7,
+    "Swing_Score": 60.0,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.5972
+    "Swing_Prob_Followthrough": 0.5997
   },
   {
     "Date": "2024-01-01",
@@ -129045,7 +129045,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 71.0,
+    "Swing_Score": 71.1,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
     "Swing_Prob_Followthrough": 0.7103
   },
@@ -129277,9 +129277,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 69.9,
+    "Swing_Score": 69.7,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.6992
+    "Swing_Prob_Followthrough": 0.6966
   },
   {
     "Date": "2024-01-10",
@@ -129393,7 +129393,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 71.5,
+    "Swing_Score": 71.4,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
     "Swing_Prob_Followthrough": 0.7149
   },
@@ -129509,9 +129509,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 74.2,
+    "Swing_Score": 74.1,
     "Swing_Regime": "\ud83d\udfe2 High Follow-Through",
-    "Swing_Prob_Followthrough": 0.7419
+    "Swing_Prob_Followthrough": 0.7409
   },
   {
     "Date": "2024-01-16",
@@ -130205,7 +130205,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 51.2,
+    "Swing_Score": 51.3,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.5119
   },
@@ -131017,9 +131017,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 30.2,
+    "Swing_Score": 30.1,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.3022
+    "Swing_Prob_Followthrough": 0.3015
   },
   {
     "Date": "2024-02-22",
@@ -132293,9 +132293,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 68.3,
+    "Swing_Score": 68.0,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.683
+    "Swing_Prob_Followthrough": 0.6805
   },
   {
     "Date": "2024-03-26",
@@ -137513,7 +137513,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 26.6,
+    "Swing_Score": 26.4,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.2658
   },
@@ -143313,7 +143313,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 54.5,
+    "Swing_Score": 54.1,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.5446
   },
@@ -151839,9 +151839,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 18.3,
+    "Swing_Score": 18.1,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.183
+    "Swing_Prob_Followthrough": 0.1814
   },
   {
     "Date": "2025-08-04",
@@ -153231,7 +153231,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 57.1,
+    "Swing_Score": 57.0,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.571
   },
@@ -153697,7 +153697,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 57.6,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
-    "Swing_Prob_Followthrough": 0.5761
+    "Swing_Prob_Followthrough": 0.5755
   },
   {
     "Date": "2025-09-19",
@@ -154101,9 +154101,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 35.3,
+    "Swing_Score": 35.0,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.3532
+    "Swing_Prob_Followthrough": 0.3502
   },
   {
     "Date": "2025-09-30",
@@ -154159,7 +154159,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 39.9,
+    "Swing_Score": 39.6,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.3989
   },
@@ -155321,7 +155321,7 @@
     "Bull_AllSMA_Prob": 0.0,
     "Swing_Score": 39.0,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.3903
+    "Swing_Prob_Followthrough": 0.3905
   },
   {
     "Date": "2025-10-31",
@@ -156769,7 +156769,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 32.6,
+    "Swing_Score": 32.5,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.3256
   },
@@ -159901,7 +159901,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 35.1,
+    "Swing_Score": 35.0,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.3514
   },
@@ -162511,9 +162511,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 35.0,
+    "Swing_Score": 34.8,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.3504
+    "Swing_Prob_Followthrough": 0.3485
   },
   {
     "Date": "2026-05-06",
@@ -163207,9 +163207,9 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 44.5,
+    "Swing_Score": 44.3,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
-    "Swing_Prob_Followthrough": 0.4452
+    "Swing_Prob_Followthrough": 0.4434
   },
   {
     "Date": "2026-05-22",
@@ -163903,7 +163903,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 63.7,
+    "Swing_Score": 63.6,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.6372
   },
@@ -164599,7 +164599,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 28.0,
+    "Swing_Score": 27.8,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.2795
   },
@@ -166223,7 +166223,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 54.7,
+    "Swing_Score": 54.6,
     "Swing_Regime": "\ud83d\udfe1 Selective Momentum",
     "Swing_Prob_Followthrough": 0.5473
   },
@@ -167151,7 +167151,7 @@
     "Bull_AllSMA_Buy": false,
     "Bull_AllSMA_Sell": false,
     "Bull_AllSMA_Prob": 0.0,
-    "Swing_Score": 29.7,
+    "Swing_Score": 29.5,
     "Swing_Regime": "\ud83d\udd34 High Failure Risk",
     "Swing_Prob_Followthrough": 0.2971
   },
