@@ -37,56 +37,94 @@ def calculate_stock_indicators(df):
     # Ensure Date is Date type (it might be timestamp in master)
     df = df.with_columns(pl.col("Date").cast(pl.Date))
 
-    # Filter to equity series only for consistent breadth calculations.
-    # Historical data (pre-Feb 18, 2026) contains non-equity series (SM, ST, GB, GS, etc.)
-    # that inflate TotalTraded by ~580 rows/day and pollute breadth counts.
+    # Filter to equity series (EQ, BE, BZ) to maintain series continuity across T2T transitions.
+    # Excludes SME and non-equity debt instruments (SM, ST, GB, GS, etc.)
     series_col = "series" if "series" in df.columns else ("Series" if "Series" in df.columns else None)
     if series_col:
         before_count = len(df)
-        df = df.filter(pl.col(series_col) == "EQ")
+        df = df.filter(pl.col(series_col).is_in(["EQ", "BE", "BZ"]))
         after_count = len(df)
-        print(f"Filtered to EQ series only: {before_count} -> {after_count} rows ({before_count - after_count} non-EQ removed)")
+        print(f"Filtered to EQ/BE/BZ series: {before_count} -> {after_count} rows ({before_count - after_count} non-equity removed)")
 
-    # Deduplicate: year-boundary parquet partitions can cause duplicate rows
-    # (e.g., Dec 31, 2021 had every symbol duplicated 2x).
+    # Deduplicate: sort by Symbol, Date, Volume DESC so the primary series is retained if both EQ and BE exist
     before_dedup = len(df)
+    if "Volume" in df.columns:
+        df = df.sort(["Symbol", "Date", "Volume"], descending=[False, False, True])
+    else:
+        df = df.sort(["Symbol", "Date"])
     df = df.unique(subset=["Symbol", "Date"], keep="first")
+    df = df.sort(["Symbol", "Date"])
     after_dedup = len(df)
     if before_dedup != after_dedup:
         print(f"Deduplicated: {before_dedup} -> {after_dedup} rows ({before_dedup - after_dedup} duplicates removed)")
 
-    # Sort just in case
-    df = df.sort(["Symbol", "Date"])
+    # Apply corporate action backward cumulative adjustment factors
+    try:
+        from corporate_actions_util import apply_corporate_actions_polars
+    except ImportError:
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from corporate_actions_util import apply_corporate_actions_polars
+    df = apply_corporate_actions_polars(df)
     
     # Window operations needed:
-    # 1. 5-day Return: (Close / Close_lag_5) - 1
-    # 2. SMAs: 20, 50, 200
-    # 3. New Highs/Lows: Rolling Max/Min 252 days (1 year approx)
-    
-    # We use 'over("Symbol")' to partition operations
+    # 1. Seasoning count per symbol
+    # 2. Split-adjusted 1D and 5D returns (with PrevClose fallback for listing days)
+    # 3. SMAs: 20, 50, 200 on AdjClose
+    # 4. New Highs/Lows: Rolling Max/Min 252 days on AdjHigh/AdjLow with >= 252 day seasoning
     
     df = df.with_columns([
+        pl.int_range(1, pl.len() + 1).over("Symbol").alias("symbol_day_count"),
+        pl.col("AdjClose").shift(1).over("Symbol").alias("Prev_AdjClose"),
+        pl.col("AdjClose").shift(5).over("Symbol").alias("Prev_AdjClose5"),
+    ])
+
+    df = df.with_columns([
         # Returns
-        (pl.col("Close") / pl.col("Close").shift(1).over("Symbol") - 1).alias("PctChange1D"),
-        (pl.col("Close") / pl.col("Close").shift(5).over("Symbol") - 1).alias("PctChange5D"),
+        pl.when(pl.col("Prev_AdjClose").is_not_null())
+          .then(pl.col("AdjClose") / pl.col("Prev_AdjClose") - 1.0)
+          .otherwise(
+              pl.when(pl.col("PrevClose").is_not_null() & (pl.col("PrevClose") > 0))
+                .then(pl.col("Close") / pl.col("PrevClose") - 1.0)
+                .otherwise(None)
+          ).alias("PctChange1D"),
+        (pl.col("AdjClose") / pl.col("Prev_AdjClose5") - 1.0).alias("PctChange5D"),
         
-        # SMAs
-        pl.col("Close").rolling_mean(window_size=20).over("Symbol").alias("SMA20"),
-        pl.col("Close").rolling_mean(window_size=50).over("Symbol").alias("SMA50"),
-        pl.col("Close").rolling_mean(window_size=200).over("Symbol").alias("SMA200"),
+        # SMAs on AdjClose
+        pl.col("AdjClose").rolling_mean(window_size=20).over("Symbol").alias("SMA20"),
+        pl.col("AdjClose").rolling_mean(window_size=50).over("Symbol").alias("SMA50"),
+        pl.col("AdjClose").rolling_mean(window_size=200).over("Symbol").alias("SMA200"),
         
-        # 52 Week High/Low (approx 252 trading days)
-        pl.col("High").rolling_max(window_size=252).over("Symbol").alias("High52W"),
-        pl.col("Low").rolling_min(window_size=252).over("Symbol").alias("Low52W"),
+        # 52 Week High/Low (252 trading days) with strict >= 252 session seasoning check
+        pl.when(pl.col("symbol_day_count") >= 252)
+          .then(pl.col("AdjHigh").rolling_max(window_size=252).over("Symbol"))
+          .otherwise(None)
+          .alias("High52W"),
+        pl.when(pl.col("symbol_day_count") >= 252)
+          .then(pl.col("AdjLow").rolling_min(window_size=252).over("Symbol"))
+          .otherwise(None)
+          .alias("Low52W"),
         
         # Volume Spike
         pl.col("Volume").rolling_mean(window_size=20).over("Symbol").alias("AvgVol20")
     ])
     
-    # Derived Boolean Flags
+    # Derived Boolean Flags with Mutual Exclusion and Seasoning
+    is_high_cond = (
+        pl.col("High52W").is_not_null() & 
+        (pl.col("AdjHigh") >= pl.col("High52W")) & 
+        (pl.col("AdjHigh") > pl.col("Low52W")) & 
+        ((pl.col("AdjLow") > pl.col("Low52W")) | (pl.col("PctChange1D") >= 0))
+    )
+    is_low_cond = (
+        pl.col("Low52W").is_not_null() & 
+        (pl.col("AdjLow") <= pl.col("Low52W")) & 
+        (pl.col("AdjLow") < pl.col("High52W")) & 
+        (~is_high_cond)
+    )
     df = df.with_columns([
-        (pl.col("High") >= pl.col("High52W")).alias("IsNew52W_High"),
-        (pl.col("Low") <= pl.col("Low52W")).alias("IsNew52W_Low")
+        is_high_cond.alias("IsNew52W_High"),
+        is_low_cond.alias("IsNew52W_Low")
     ])
     
     return df
@@ -96,20 +134,6 @@ def calculate_breadth_aggregates(df):
     Aggregates daily statistics across the market.
     """
     print("Aggregating daily market breadth...")
-    
-    # Filter for active trading days only? ensure date links
-    
-    # Conditions
-    # 1. Up 4.5%
-    # 2. Down 4.5%
-    # 3. Up 20% in 5D
-    # 4. Down 20% in 5D
-    # 5. Above SMA 20, 50, 200
-    # 6. Positive/Negative
-    # 7. New Highs/Lows (Close > High52W prev day? using High/Low)
-    #    Strictly speaking, "New High" is when High >= High52W. 
-    #    Or commonly, High > Prev_High52W. 
-    #    Let's use High == High52W for simplicity, or High >= rolling_max(252)
     
     # Aggregate by Date
     daily_stats = df.group_by("Date").agg([
@@ -127,11 +151,12 @@ def calculate_breadth_aggregates(df):
         # 4. Down 20% in 5 days
         (pl.col("PctChange5D") <= -0.20).sum().alias("No. of stocks down 20%+ in 5 days"),
         
-        # 5. SMA Counts
-        (pl.col("Close") > pl.col("SMA200")).sum().alias("No of stocks above 200 day SMA"),
-        (pl.col("Close") > pl.col("SMA50")).sum().alias("No of stocks above 50 day SMA"),
-        (pl.col("Close") > pl.col("SMA20").fill_null(0)).sum().alias("No of stocks above 20 day SMA"),
-        ((pl.col("Close") > pl.col("SMA200")) & (pl.col("Close") > pl.col("SMA50")) & (pl.col("Close") > pl.col("SMA20").fill_null(0))).sum().alias("No of stocks above all 3 SMAs"),
+        # 5. SMA Counts (requiring non-null SMA values; no fill_null(0))
+        ((pl.col("SMA200").is_not_null()) & (pl.col("AdjClose") > pl.col("SMA200"))).sum().alias("No of stocks above 200 day SMA"),
+        ((pl.col("SMA50").is_not_null()) & (pl.col("AdjClose") > pl.col("SMA50"))).sum().alias("No of stocks above 50 day SMA"),
+        ((pl.col("SMA20").is_not_null()) & (pl.col("AdjClose") > pl.col("SMA20"))).sum().alias("No of stocks above 20 day SMA"),
+        ((pl.col("SMA200").is_not_null()) & (pl.col("SMA50").is_not_null()) & (pl.col("SMA20").is_not_null()) & 
+         (pl.col("AdjClose") > pl.col("SMA200")) & (pl.col("AdjClose") > pl.col("SMA50")) & (pl.col("AdjClose") > pl.col("SMA20"))).sum().alias("No of stocks above all 3 SMAs"),
         
         # 6. Market Breadth
         (pl.col("PctChange1D") > 0).sum().alias("No of stocks which are positive"),
@@ -148,7 +173,7 @@ def calculate_breadth_aggregates(df):
         (pl.col("New52W_Highs").cast(pl.Int64) - pl.col("New52W_Lows").cast(pl.Int64)).alias("Net New Highs")
     ])
     
-    # Select and Reorder columns precisely
+    # Select and Reorder columns precisely (retaining New52W_Highs and New52W_Lows)
     final_cols = [
         "Date",
         "No. of stocks up 4.5%+ in the current day",
@@ -163,6 +188,8 @@ def calculate_breadth_aggregates(df):
         "No of stocks which are negative",
         "Advance/Decline Ratio",
         "Net New Highs",
+        "New52W_Highs",
+        "New52W_Lows",
         "TotalTraded"
     ]
     
@@ -205,7 +232,8 @@ def generate_annual_drilldowns(df):
                     pl.col("Close").round(2),
                     (pl.col("PctChange1D") * 100).round(2),
                     (pl.col("PctChange5D") * 100).round(2),
-                    pl.col("Volume").fill_null(0)
+                    pl.col("Volume").fill_null(0),
+                    (pl.col("Close") * pl.col("Volume") / 10000000.0).round(2)
                 ])
                 return [list(row) for row in res.iter_rows()]
 
@@ -216,6 +244,7 @@ def generate_annual_drilldowns(df):
                 "down20_5d": extract_tuples(sub.filter(pl.col("PctChange5D") <= -0.20), "PctChange5D", False),
                 "high52w": extract_tuples(sub.filter(pl.col("IsNew52W_High")), "PctChange1D", True),
                 "low52w": extract_tuples(sub.filter(pl.col("IsNew52W_Low")), "PctChange1D", False),
+                "top_setups": []
             }
             
         json_content = json.dumps(drill_yr, separators=(',', ':'))

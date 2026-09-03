@@ -32,19 +32,63 @@ def compute_ground_truth_targets(parquet_dir="data/parquet"):
     print("Computing forward 5-day breakout follow-through ground truth from DuckDB...")
     con = duckdb.connect(database=':memory:')
     
+    try:
+        from corporate_actions_util import register_corporate_actions_duckdb
+    except ImportError:
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from corporate_actions_util import register_corporate_actions_duckdb
+    register_corporate_actions_duckdb(con)
+    
     query = f"""
-    WITH stock_daily AS (
+    WITH raw_stocks AS (
         SELECT 
             symbol,
             CAST(trade_date AS DATE) AS trade_date,
             open, high, low, close, volume,
             COALESCE(turnover, close * volume) AS turnover,
+            prev_close,
+            series
+        FROM read_parquet('{parquet_dir}/**/*.parquet', union_by_name=true)
+        WHERE series IN ('EQ', 'BE', 'BZ')
+    ),
+    deduped AS (
+        SELECT *,
+            ROW_NUMBER() OVER (PARTITION BY symbol, trade_date ORDER BY volume DESC) AS rn
+        FROM raw_stocks
+    ),
+    clean_stocks AS (
+        SELECT symbol, trade_date, open, high, low, close, volume, turnover, prev_close
+        FROM deduped
+        WHERE rn = 1
+    ),
+    adjusted_stocks AS (
+        SELECT 
+            s.symbol, s.trade_date,
+            s.open * COALESCE(adj.adj_factor, 1.0) AS open,
+            s.high * COALESCE(adj.adj_factor, 1.0) AS high,
+            s.low * COALESCE(adj.adj_factor, 1.0) AS low,
+            s.close * COALESCE(adj.adj_factor, 1.0) AS close,
+            s.volume, s.turnover, s.prev_close
+        FROM clean_stocks s
+        LEFT JOIN corporate_action_intervals adj
+          ON s.symbol = adj.symbol 
+         AND s.trade_date >= adj.start_date 
+         AND s.trade_date <= adj.end_date
+    ),
+    stock_daily AS (
+        SELECT 
+            symbol,
+            trade_date,
+            open, high, low, close, volume, turnover,
             COALESCE(prev_close, LAG(close, 1) OVER (PARTITION BY symbol ORDER BY trade_date)) AS prev_close,
+            ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY trade_date) AS symbol_day_count,
             AVG(close) OVER (PARTITION BY symbol ORDER BY trade_date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) AS sma20,
             AVG(close) OVER (PARTITION BY symbol ORDER BY trade_date ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) AS sma50,
-            MAX(high) OVER (PARTITION BY symbol ORDER BY trade_date ROWS BETWEEN 251 PRECEDING AND CURRENT ROW) AS high_52w
-        FROM read_parquet('{parquet_dir}/**/*.parquet')
-        WHERE series IN ('EQ', 'BE', 'BZ', 'SM') OR series IS NULL
+            CASE WHEN ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY trade_date) >= 252 
+                 THEN MAX(high) OVER (PARTITION BY symbol ORDER BY trade_date ROWS BETWEEN 251 PRECEDING AND CURRENT ROW)
+                 ELSE NULL END AS high_52w
+        FROM adjusted_stocks
     ),
     forward_stats AS (
         SELECT 
@@ -60,7 +104,7 @@ def compute_ground_truth_targets(parquet_dir="data/parquet"):
     setup_outcomes AS (
         SELECT 
             trade_date,
-            CASE WHEN turnover >= 10000000 AND (pct_1d >= 0.04 OR close >= high_52w*0.995 OR (close > sma20 AND sma20 > sma50))
+            CASE WHEN turnover >= 10000000 AND (pct_1d >= 0.04 OR (high_52w IS NOT NULL AND close >= high_52w*0.995) OR (close > sma20 AND sma20 > sma50))
                  THEN 1 ELSE 0 END AS is_setup,
             CASE WHEN (fwd_max_high_5d - close) / NULLIF(close, 0) >= 0.05 
                   AND (fwd_min_low_5d - close) / NULLIF(close, 0) > -0.035

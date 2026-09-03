@@ -991,15 +991,21 @@ export function DrilldownModal({
                           {setup.close ? `₹${setup.close.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums">
-                          <span className={`px-2 py-0.5 rounded font-semibold text-xs inline-block ${
-                            (setup.pct1d ?? 0) > 0 
-                              ? 'bg-green-950/80 text-green-400 border border-green-800/60' 
-                              : (setup.pct1d ?? 0) < 0
-                              ? 'bg-red-950/80 text-red-400 border border-red-800/60'
-                              : 'text-slate-400'
-                          }`}>
-                            {formatPct(setup.pct1d)}
-                          </span>
+                          {setup.pct1d === null || setup.pct1d === undefined || isNaN(setup.pct1d) ? (
+                            <span className="px-2 py-0.5 rounded font-semibold text-xs inline-block bg-purple-950/80 text-purple-300 border border-purple-800/60">
+                              IPO
+                            </span>
+                          ) : (
+                            <span className={`px-2 py-0.5 rounded font-semibold text-xs inline-block ${
+                              (setup.pct1d ?? 0) > 0 
+                                ? 'bg-green-950/80 text-green-400 border border-green-800/60' 
+                                : (setup.pct1d ?? 0) < 0
+                                ? 'bg-red-950/80 text-red-400 border border-red-800/60'
+                                : 'text-slate-400'
+                            }`}>
+                              {formatPct(setup.pct1d)}
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums">
                           <span className={`px-2 py-0.5 rounded font-semibold text-xs inline-block ${
@@ -1188,15 +1194,21 @@ export function DrilldownModal({
                           {close !== null && close !== undefined && !isNaN(close) ? `₹${close.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums">
-                          <span className={`px-2 py-0.5 rounded font-semibold text-xs inline-block ${
-                            (pct1 ?? 0) > 0 
-                              ? 'bg-green-950/80 text-green-400 border border-green-800/60' 
-                              : (pct1 ?? 0) < 0
-                              ? 'bg-red-950/80 text-red-400 border border-red-800/60'
-                              : 'text-slate-400'
-                          }`}>
-                            {formatPct(pct1)}
-                          </span>
+                          {pct1 === null || pct1 === undefined || isNaN(pct1) ? (
+                            <span className="px-2 py-0.5 rounded font-semibold text-xs inline-block bg-purple-950/80 text-purple-300 border border-purple-800/60">
+                              IPO
+                            </span>
+                          ) : (
+                            <span className={`px-2 py-0.5 rounded font-semibold text-xs inline-block ${
+                              (pct1 ?? 0) > 0 
+                                ? 'bg-green-950/80 text-green-400 border border-green-800/60' 
+                                : (pct1 ?? 0) < 0
+                                ? 'bg-red-950/80 text-red-400 border border-red-800/60'
+                                : 'text-slate-400'
+                            }`}>
+                              {formatPct(pct1)}
+                            </span>
+                          )}
                         </td>
                         {is5DMetric && (
                           <td className="px-4 py-2.5 text-right tabular-nums">

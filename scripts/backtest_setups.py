@@ -4,6 +4,15 @@ import numpy as np
 
 con = duckdb.connect()
 
+try:
+    from corporate_actions_util import register_corporate_actions_duckdb
+except ImportError:
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from corporate_actions_util import register_corporate_actions_duckdb
+register_corporate_actions_duckdb(con)
+
 query = """
 WITH raw_stocks AS (
     SELECT 
@@ -17,7 +26,7 @@ WITH raw_stocks AS (
         volume AS Volume,
         COALESCE(turnover, close * volume) AS Turnover
     FROM read_parquet('data/parquet/**/*.parquet', union_by_name=true)
-    WHERE series = 'EQ'
+    WHERE series IN ('EQ', 'BE', 'BZ')
 ),
 deduped AS (
     SELECT *,
@@ -29,35 +38,55 @@ clean_stocks AS (
     FROM deduped
     WHERE rn = 1
 ),
+adjusted_stocks AS (
+    SELECT 
+        s.Symbol, s.Date,
+        s.Open * COALESCE(adj.adj_factor, 1.0) AS AdjOpen,
+        s.High * COALESCE(adj.adj_factor, 1.0) AS AdjHigh,
+        s.Low * COALESCE(adj.adj_factor, 1.0) AS AdjLow,
+        s.Close * COALESCE(adj.adj_factor, 1.0) AS AdjClose,
+        s.Open, s.High, s.Low, s.Close, s.PrevClose, s.Volume, s.Turnover
+    FROM clean_stocks s
+    LEFT JOIN corporate_action_intervals adj
+      ON s.Symbol = adj.symbol 
+     AND s.Date >= adj.start_date 
+     AND s.Date <= adj.end_date
+),
 calculated AS (
     SELECT 
         Symbol, Date, Open, High, Low, Close, PrevClose, Volume, Turnover,
-        (Close / NULLIF(LAG(Close, 1) OVER (PARTITION BY Symbol ORDER BY Date), 0)) - 1.0 AS Pct1D,
-        (Close / NULLIF(LAG(Close, 5) OVER (PARTITION BY Symbol ORDER BY Date), 0)) - 1.0 AS Pct5D,
+        AdjOpen, AdjHigh, AdjLow, AdjClose,
+        ROW_NUMBER() OVER (PARTITION BY Symbol ORDER BY Date) AS symbol_day_count,
+        (AdjClose / NULLIF(COALESCE(LAG(AdjClose, 1) OVER (PARTITION BY Symbol ORDER BY Date), PrevClose), 0)) - 1.0 AS Pct1D,
+        (AdjClose / NULLIF(LAG(AdjClose, 5) OVER (PARTITION BY Symbol ORDER BY Date), 0)) - 1.0 AS Pct5D,
         AVG(Volume) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS AvgVol20,
-        AVG(Close) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS SMA20,
-        AVG(Close) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 50 PRECEDING AND CURRENT ROW) AS SMA50,
-        AVG(Close) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 200 PRECEDING AND CURRENT ROW) AS SMA200,
-        MAX(High) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 252 PRECEDING AND CURRENT ROW) AS High52W,
-        AVG((High - Low)/NULLIF(Close,0)) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 5 PRECEDING AND CURRENT ROW) AS ATR5,
-        AVG((High - Low)/NULLIF(Close,0)) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 20 PRECEDING AND CURRENT ROW) AS ATR20,
-        -- Forward 5-day return and max favorable/adverse excursion
-        (LEAD(Close, 5) OVER (PARTITION BY Symbol ORDER BY Date) / NULLIF(Close, 0)) - 1.0 AS Fwd5DReturn,
-        (MAX(High) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 1 FOLLOWING AND 5 FOLLOWING) / NULLIF(Close, 0)) - 1.0 AS Fwd5DMFE,
-        (MIN(Low) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 1 FOLLOWING AND 5 FOLLOWING) / NULLIF(Close, 0)) - 1.0 AS Fwd5DMAE
-    FROM clean_stocks
+        AVG(AdjClose) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) AS SMA20,
+        AVG(AdjClose) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) AS SMA50,
+        AVG(AdjClose) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 199 PRECEDING AND CURRENT ROW) AS SMA200,
+        CASE 
+            WHEN ROW_NUMBER() OVER (PARTITION BY Symbol ORDER BY Date) >= 252 
+            THEN MAX(AdjHigh) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 251 PRECEDING AND CURRENT ROW)
+            ELSE NULL 
+        END AS High52W,
+        AVG((AdjHigh - AdjLow)/NULLIF(AdjClose,0)) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) AS ATR5,
+        AVG((AdjHigh - AdjLow)/NULLIF(AdjClose,0)) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) AS ATR20,
+        -- Forward 5-day return and max favorable/adverse excursion (using AdjClose for consistency)
+        (LEAD(AdjClose, 5) OVER (PARTITION BY Symbol ORDER BY Date) / NULLIF(AdjClose, 0)) - 1.0 AS Fwd5DReturn,
+        (MAX(AdjHigh) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 1 FOLLOWING AND 5 FOLLOWING) / NULLIF(AdjClose, 0)) - 1.0 AS Fwd5DMFE,
+        (MIN(AdjLow) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 1 FOLLOWING AND 5 FOLLOWING) / NULLIF(AdjClose, 0)) - 1.0 AS Fwd5DMAE
+    FROM adjusted_stocks
 )
 SELECT 
     Symbol, Date, Close, Volume, Turnover, Pct1D, Pct5D,
-    CASE WHEN High = Low THEN 0.5 ELSE (Close - Low) / NULLIF(High - Low, 0) END AS CLV,
+    CASE WHEN AdjHigh = AdjLow THEN 0.5 ELSE (AdjClose - AdjLow) / NULLIF(AdjHigh - AdjLow, 0) END AS CLV,
     Volume / NULLIF(AvgVol20, 0) AS RVOL,
     ATR5 / NULLIF(ATR20, 0) AS Compression,
-    (Close > SMA20 AND SMA20 > SMA50 AND SMA50 > SMA200) AS IsStage2,
-    (High52W - Close) / NULLIF(High52W, 0) * 100.0 AS Dist52W,
-    (High >= High52W) AS IsNew52W_High,
+    (symbol_day_count >= 200 AND AdjClose > SMA20 AND SMA20 > SMA50 AND SMA50 > SMA200) AS IsStage2,
+    (High52W - AdjClose) / NULLIF(High52W, 0) * 100.0 AS Dist52W,
+    (High52W IS NOT NULL AND AdjHigh >= High52W) AS IsNew52W_High,
     Fwd5DReturn, Fwd5DMFE, Fwd5DMAE
 FROM calculated
-WHERE Date >= '2015-01-01' AND Turnover >= 10000000 AND (Pct1D >= 0.035 OR Pct5D >= 0.15 OR High >= High52W)
+WHERE Date >= '2015-01-01' AND Turnover >= 10000000 AND (Pct1D >= 0.035 OR Pct5D >= 0.15 OR (High52W IS NOT NULL AND AdjHigh >= High52W))
 """
 
 print("Running 12-Year Empirical Backtest Query...")
