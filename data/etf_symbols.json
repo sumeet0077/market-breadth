@@ -1,6 +1,6 @@
 {
   "description": "NSE Active and Historical Exchange Traded Funds (ETFs) and Exclusion Registry",
-  "count": 504,
+  "count": 505,
   "re_pattern": "-RE.*",
   "etf_symbols": [
     "ABGSEC",
@@ -458,6 +458,7 @@
     "SENSEXETF",
     "SENSEXIETF",
     "SENSEXIWIN",
+    "SEPC-RE3",
     "SETF10GILT",
     "SETFBANK",
     "SETFGOLD",
