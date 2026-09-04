@@ -34,7 +34,6 @@
     "ratio": 2.0,
     "description": "1:1 Bonus Issue"
   },
-
   {
     "symbol": "METROPOLIS",
     "ex_date": "2026-03-20",
@@ -167,5 +166,12 @@
     "action": "SPLIT",
     "ratio": 10.0,
     "description": "10:1 Stock Split (FV 10 to 1)"
+  },
+  {
+    "symbol": "TCC",
+    "ex_date": "2026-09-04",
+    "action": "SPLIT",
+    "ratio": 5.0,
+    "description": "5:1 Stock Split (auto-detected)"
   }
 ]
