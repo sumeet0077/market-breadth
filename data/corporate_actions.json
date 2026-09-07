@@ -173,5 +173,12 @@
     "action": "SPLIT",
     "ratio": 5.0,
     "description": "5:1 Stock Split (auto-detected)"
+  },
+  {
+    "symbol": "HEG",
+    "ex_date": "2026-09-07",
+    "action": "SPLIT",
+    "ratio": 2.5,
+    "description": "5:2 Stock Split (auto-detected)"
   }
 ]
