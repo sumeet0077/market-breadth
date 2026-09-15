@@ -202,20 +202,6 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
         if (sym_clean, date_str) in existing_keys:
             continue
             
-        # Check volume against 20-day average volume in historical master
-        vol_query = f"""
-            SELECT AVG(volume) FROM '{local_master}/**/*.parquet'
-            WHERE symbol = ? AND trade_date < ? AND trade_date >= ? - INTERVAL 45 DAYS
-        """
-        try:
-            avg_vol_res = con.execute(vol_query, [sym_clean, t_date, t_date]).fetchone()
-            avg_vol = avg_vol_res[0] if avg_vol_res and avg_vol_res[0] else 0
-        except Exception:
-            avg_vol = 0
-            
-        if avg_vol > 0 and vol < (1.5 * avg_vol):
-            continue
-            
         action_type = None
         ratio = None
         desc = None

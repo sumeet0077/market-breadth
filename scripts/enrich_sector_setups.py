@@ -305,7 +305,13 @@ def generate_enriched_drilldowns():
             Symbol, Date, Open, High, Low, Close, PrevClose, Volume, Turnover,
             AdjOpen, AdjHigh, AdjLow, AdjClose,
             ROW_NUMBER() OVER (PARTITION BY Symbol ORDER BY Date) AS symbol_day_count,
-            (AdjClose / NULLIF(COALESCE(LAG(AdjClose, 1) OVER (PARTITION BY Symbol ORDER BY Date), PrevClose), 0)) - 1.0 AS Pct1D,
+            CASE 
+                WHEN LAG(AdjClose, 1) OVER (PARTITION BY Symbol ORDER BY Date) IS NOT NULL 
+                THEN (AdjClose / LAG(AdjClose, 1) OVER (PARTITION BY Symbol ORDER BY Date)) - 1.0
+                WHEN PrevClose IS NOT NULL AND PrevClose > 0 AND (Close / PrevClose - 1.0) >= -0.25
+                THEN (Close / PrevClose) - 1.0
+                ELSE NULL 
+            END AS Pct1D,
             (AdjClose / NULLIF(LAG(AdjClose, 5) OVER (PARTITION BY Symbol ORDER BY Date), 0)) - 1.0 AS Pct5D,
             AVG(Volume) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS AvgVol20,
             AVG(AdjClose) OVER (PARTITION BY Symbol ORDER BY Date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) AS SMA20,

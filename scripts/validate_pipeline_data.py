@@ -331,8 +331,49 @@ def validate_pipeline_data():
     else:
         print("  ✅ ANGELONE never appeared in low52w post-split (2026-02-26 onwards)")
 
-    # Check 5: Audit all registered actions against artificial unadjusted split plunge
+    # Check 5: PGIL on ex-bonus date (2026-09-11) and post-bonus low52w
+    session_pgil = drill_2026.get("2026-09-11", {})
+    down45_pgil = [item for item in session_pgil.get("down45", []) if item[0] == "PGIL"]
+    if len(down45_pgil) > 0:
+        print(f"  ❌ PGIL falsely entered down45 on ex-date 2026-09-11: {down45_pgil}")
+        ca_errors += 1
+    else:
+        print("  ✅ PGIL did not enter down45 on ex-date 2026-09-11")
+
+    pgil_low_dates = []
+    for d_str, s_data in drill_2026.items():
+        if d_str >= "2026-09-11":
+            if any(item[0] == "PGIL" for item in s_data.get("low52w", [])):
+                pgil_low_dates.append(d_str)
+    if len(pgil_low_dates) > 0:
+        print(f"  ❌ PGIL falsely appeared in low52w on post-bonus dates: {pgil_low_dates}")
+        ca_errors += len(pgil_low_dates)
+    else:
+        print("  ✅ PGIL never appeared in low52w post-bonus (2026-09-11 onwards)")
+
+    # Check 6: INDIAGLYCO on ex-split date (2026-09-02) and post-split low52w
+    session_indiaglyco = drill_2026.get("2026-09-02", {})
+    down45_indiaglyco = [item for item in session_indiaglyco.get("down45", []) if item[0] == "INDIAGLYCO"]
+    if len(down45_indiaglyco) > 0:
+        print(f"  ❌ INDIAGLYCO falsely entered down45 on ex-date 2026-09-02: {down45_indiaglyco}")
+        ca_errors += 1
+    else:
+        print("  ✅ INDIAGLYCO did not enter down45 on ex-date 2026-09-02")
+
+    indiaglyco_low_dates = []
+    for d_str, s_data in drill_2026.items():
+        if d_str >= "2026-09-02":
+            if any(item[0] == "INDIAGLYCO" for item in s_data.get("low52w", [])):
+                indiaglyco_low_dates.append(d_str)
+    if len(indiaglyco_low_dates) > 0:
+        print(f"  ❌ INDIAGLYCO falsely appeared in low52w on post-split dates: {indiaglyco_low_dates}")
+        ca_errors += len(indiaglyco_low_dates)
+    else:
+        print("  ✅ INDIAGLYCO never appeared in low52w post-split (2026-09-02 onwards)")
+
+    # Check 7: Audit all registered actions against artificial unadjusted split plunge
     ca_path = os.path.join(os.path.dirname(__file__), "..", "data", "corporate_actions.json")
+    all_cas = []
     if os.path.exists(ca_path):
         with open(ca_path, "r") as f:
             all_cas = json.load(f)
@@ -354,11 +395,28 @@ def validate_pipeline_data():
                         print(f"  ❌ {sym} has an unadjusted split plunge on ex-date {ex_d}: {pct*100:.2f}% (unadjusted baseline: {unadj_drop*100:.2f}%)")
                         ca_errors += 1
 
+    # Invariant 4B: Active fail-closed scan for ANY unregistered single-day drop <= -28%
+    registered_keys = {(ca['symbol'].strip().upper(), ca['ex_date']) for ca in all_cas}
+    unregistered_split_drops = 0
+    for yr, yr_data in annual_drilldowns.items():
+        if int(yr) < 2026:
+            continue
+        for d_str, session_data in yr_data.items():
+            for item in session_data.get("down45", []):
+                sym = item[0]
+                pct1d = item[2]
+                if pct1d <= -28.0:
+                    if (sym, d_str) not in registered_keys and not sym.endswith("-RE"):
+                        print(f"  🚨 Invariant 4B Violation: Unregistered split drop for {sym} on {d_str} ({pct1d:.2f}%). Must be registered in corporate_actions.json!")
+                        unregistered_split_drops += 1
+    if unregistered_split_drops > 0:
+        ca_errors += unregistered_split_drops
+
     if ca_errors > 0:
         print(f"\n❌ FAILED: {ca_errors} corporate action integrity errors detected.")
         sys.exit(1)
     else:
-        print("✅ Invariant 4: Corporate action split integrity (POCL, GOODLUCK, ANGELONE + registry): 100% CLEAN")
+        print("✅ Invariant 4: Corporate action split integrity (POCL, GOODLUCK, ANGELONE, PGIL, INDIAGLYCO + Active 4B Guard): 100% CLEAN")
 
     # ----------------------------------------------------
     # 8. STRICT INVARIANT 5: Zero ETF & Rights Entitlement Leakage Guardrail

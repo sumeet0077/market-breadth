@@ -93,7 +93,7 @@ def calculate_stock_indicators(df):
         pl.when(pl.col("Prev_AdjClose").is_not_null())
           .then(pl.col("AdjClose") / pl.col("Prev_AdjClose") - 1.0)
           .otherwise(
-              pl.when(pl.col("PrevClose").is_not_null() & (pl.col("PrevClose") > 0))
+              pl.when(pl.col("PrevClose").is_not_null() & (pl.col("PrevClose") > 0) & (pl.col("Close") / pl.col("PrevClose") - 1.0 >= -0.25))
                 .then(pl.col("Close") / pl.col("PrevClose") - 1.0)
                 .otherwise(None)
           ).alias("PctChange1D"),
