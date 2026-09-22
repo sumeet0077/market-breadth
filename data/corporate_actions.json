@@ -425,5 +425,12 @@
     "action": "BONUS",
     "ratio": 2.0,
     "description": "1:1 Bonus Issue"
+  },
+  {
+    "symbol": "TAALTECH",
+    "ex_date": "2026-09-22",
+    "action": "SPLIT",
+    "ratio": 5.0,
+    "description": "5:1 Stock Split (auto-detected)"
   }
 ]
