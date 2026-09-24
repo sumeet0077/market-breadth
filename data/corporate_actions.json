@@ -432,5 +432,12 @@
     "action": "SPLIT",
     "ratio": 5.0,
     "description": "5:1 Stock Split (auto-detected)"
+  },
+  {
+    "symbol": "POLICYBZR",
+    "ex_date": "2026-09-24",
+    "action": "BONUS",
+    "ratio": 1.5,
+    "description": "1:2 Bonus Issue (auto-detected)"
   }
 ]
