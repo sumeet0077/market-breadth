@@ -45,11 +45,12 @@ export async function GET() {
       earliest_date: earliestSession,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown health check error";
     return NextResponse.json(
       {
         status: "unhealthy",
-        error: error.message || "Unknown health check error",
+        error: errorMsg,
         timestamp: new Date().toISOString(),
       },
       { status: 500 }

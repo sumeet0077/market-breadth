@@ -19,18 +19,15 @@ import {
   LineChart,
   Compass,
   History,
-  Keyboard,
   Search,
   Share2,
   Layers,
   Sparkles,
-  Zap,
-  Shield,
-  Download,
   X,
+  LogOut,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signOut } from "@/lib/auth/auth-client";
 
 interface PlaybookDirectives {
   scenarioTitle: string;
@@ -165,12 +162,21 @@ function getPlaybookDirectives(macroState: number | undefined, swingScore: numbe
   }
 }
 
+interface DashboardUser {
+  id?: string;
+  name?: string | null;
+  email?: string | null;
+  role?: string | null;
+  plan?: string | null;
+}
+
 interface DashboardClientProps {
   initialData: MarketData[];
   initialTab?: "heatmap" | "sectors" | "charts";
+  user?: DashboardUser | null;
 }
 
-export function DashboardClient({ initialData, initialTab }: DashboardClientProps) {
+export function DashboardClient({ initialData, initialTab, user }: DashboardClientProps) {
   // Navigation Tabs: 'heatmap' | 'sectors' | 'charts'
   const [activeTab, setActiveTab] = useState<"heatmap" | "sectors" | "charts">(initialTab || "heatmap");
 
@@ -303,8 +309,11 @@ export function DashboardClient({ initialData, initialTab }: DashboardClientProp
       if (!yearCache[year]) {
         setIsDrilldownLoading(true);
         try {
-          const res = await fetch(`/drilldowns/${year}.json?v=${Date.now()}`, { cache: "no-store" });
-          if (!res.ok) throw new Error("Failed to load drilldown data");
+          const res = await fetch(`/api/market-data/drilldown/${year}`, { cache: "no-store" });
+          if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.message || `Failed to load drilldown data for ${year}`);
+          }
           const json: YearDrilldownMap = await res.json();
           setYearCache((prev) => ({ ...prev, [year]: json }));
         } catch (err) {
@@ -511,8 +520,11 @@ export function DashboardClient({ initialData, initialTab }: DashboardClientProp
   const activeYear = activeView?.Date ? activeView.Date.split("-")[0] : "";
   useEffect(() => {
     if (activeYear && !yearCache[activeYear]) {
-      fetch(`/drilldowns/${activeYear}.json?v=${Date.now()}`)
-        .then((r) => r.json())
+      fetch(`/api/market-data/drilldown/${activeYear}`)
+        .then((r) => {
+          if (!r.ok) throw new Error("Failed to load active year drilldown");
+          return r.json();
+        })
         .then((json) => setYearCache((prev) => ({ ...prev, [activeYear]: json })))
         .catch((err) => console.error(err));
     }
@@ -626,6 +638,31 @@ export function DashboardClient({ initialData, initialTab }: DashboardClientProp
             <Share2 className="w-3.5 h-3.5 text-indigo-400" />
             <span className="hidden md:inline">Share</span>
           </button>
+
+          {/* User Account & Logout */}
+          {user && (
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+              <div className="hidden sm:flex flex-col text-right">
+                <span className="text-[11px] font-bold text-slate-200 leading-tight">
+                  {user.name || user.email?.split("@")[0] || "Trader"}
+                </span>
+                <span className="text-[9px] font-mono text-cyan-400 font-bold leading-tight">
+                  {user.plan || "PRO"}
+                </span>
+              </div>
+              <button
+                onClick={async () => {
+                  await signOut();
+                  router.push("/login");
+                  router.refresh();
+                }}
+                className="p-1.5 bg-slate-950 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-800/80 rounded-xl text-slate-400 hover:text-rose-300 transition-all cursor-pointer"
+                title="Sign Out of Terminal"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -739,7 +776,7 @@ export function DashboardClient({ initialData, initialTab }: DashboardClientProp
                 <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">SIGNALS:</span>
                 <select
                   value={signalFilter}
-                  onChange={(e) => setSignalFilter(e.target.value as any)}
+                  onChange={(e) => setSignalFilter(e.target.value as "all" | "thrust" | "panic")}
                   className="bg-transparent text-cyan-300 text-xs font-semibold focus:outline-none cursor-pointer"
                 >
                   <option value="all" className="bg-slate-900 text-slate-200">All Days</option>

@@ -80,6 +80,9 @@ def load_etf_symbols(file_path=None) -> set:
     Supports both list and dictionary schemas.
     """
     global _cached_etf_symbols
+    if _cached_etf_symbols is not None and file_path is None:
+        return _cached_etf_symbols
+
     path = file_path or DEFAULT_ETF_PATH
     if not os.path.exists(path):
         return set()

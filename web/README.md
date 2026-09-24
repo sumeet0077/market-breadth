@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# QuantBreadth™ Web Terminal
 
-## Getting Started
+Production-grade Quantitative Market Breadth, Macro Regimes, and Theme Leadership Intelligence web terminal built with **Next.js 16**, **Better Auth**, **Supabase PostgreSQL**, **Drizzle ORM**, and **Tailwind CSS**.
 
-First, run the development server:
+---
 
+## Architecture Highlights
+
+* **Application Framework**: Next.js 16 (App Router with Webpack build optimization).
+* **Authentication**: Better Auth with email/password and Google OAuth 2.0.
+* **Edge Proxy Protection**: Next.js 16 `src/proxy.ts` guarding all terminal routes, APIs, and static datasets.
+* **Database & ORM**: Supabase PostgreSQL with PgBouncer connection pooling and Drizzle ORM.
+* **Transactional Email**: Resend with mock fallback for local development.
+* **Feature Gating**: Role & Plan-based entitlement system (`FREE`, `PRO`, `INSTITUTIONAL`).
+* **Demo Environment**: Domain-aware demo mode (`demo.quantbreadth.com`) with one-click test credentials.
+
+---
+
+## Quick Start
+
+### 1. Environment Setup
+Copy the example environment configuration:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
+```
+Configure your credentials in `.env.local`.
+
+### 2. Install Dependencies
+```bash
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Run Automated Tests
+Execute the comprehensive test suite (Proxy route protection, API security, input validation, and entitlements):
+```bash
+npm test
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Database Schema & Seeding
+```bash
+# Push schema to database
+npm run db:push
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Seed initial admin and demo accounts
+npm run db:seed
+```
 
-## Learn More
+### 5. Launch Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Available Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Script | Description |
+| :--- | :--- |
+| `npm run dev` | Start Next.js development server |
+| `npm run build` | Compile optimized production build |
+| `npm start` | Start Next.js production server |
+| `npm test` | Run all automated test suites |
+| `npm run db:generate` | Generate Drizzle migrations |
+| `npm run db:migrate` | Execute Drizzle migrations |
+| `npm run db:push` | Push schema changes directly to PostgreSQL |
+| `npm run db:seed` | Seed default terminal accounts |
+| `npm run db:studio` | Launch Drizzle Studio database viewer |
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Documentation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For full architecture diagrams, Vercel/Cloudflare deployment guides, Supabase connection pooling configuration, and API security protocols, refer to:
+👉 [docs/AUTHENTICATION_AND_SECURITY_ARCHITECTURE.md](../docs/AUTHENTICATION_AND_SECURITY_ARCHITECTURE.md)

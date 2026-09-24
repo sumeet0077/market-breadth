@@ -1,6 +1,6 @@
 {
   "description": "NSE Active and Historical Exchange Traded Funds (ETFs) and Exclusion Registry",
-  "count": 505,
+  "count": 506,
   "re_pattern": "-RE.*",
   "etf_symbols": [
     "ABGSEC",
@@ -451,6 +451,7 @@
     "SBIVALETF",
     "SDL24BEES",
     "SDL26BEES",
+    "SECLEDBETA",
     "SELECTIPO",
     "SENSEXADD",
     "SENSEXAXIS",

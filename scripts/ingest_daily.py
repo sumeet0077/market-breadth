@@ -136,16 +136,61 @@ def ingest_single_file(con, daily_file):
         import traceback
         traceback.print_exc()
 
-def detect_and_register_corporate_actions(con, local_master="data/parquet/master_copy.parquet"):
+def fetch_official_nse_corporate_actions():
+    """
+    Attempts to fetch official corporate action circulars/registry from NSE API.
+    Returns a dict mapping (symbol, ex_date) -> dict of action details.
+    """
+    import urllib.request
+    import json
+    official_actions = {}
+    url = "https://www.nseindia.com/api/corporates-corporateActions?index=equities"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+    }
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            for item in data:
+                sym = item.get('symbol', '').strip().upper()
+                ex_date_str = item.get('exDate', '').strip()
+                subject = item.get('subject', '')
+                if not sym or not ex_date_str or ex_date_str == '-':
+                    continue
+                try:
+                    dt = datetime.strptime(ex_date_str, '%d-%b-%Y').strftime('%Y-%m-%d')
+                except Exception:
+                    continue
+                official_actions[(sym, dt)] = {
+                    "symbol": sym,
+                    "ex_date": dt,
+                    "subject": subject
+                }
+    except Exception:
+        # Fall back cleanly if network is unreachable or blocked
+        pass
+    return official_actions
+
+def detect_and_register_corporate_actions(con, local_master="data/parquet/master_copy.parquet", ca_path=None, official_actions=None):
     """
     Scans daily_source for large overnight drops (Close / PrevClose <= 0.72)
-    and checks against 20D average volume to detect standard splits and bonus issues.
+    and enforces the multi-gate corporate action engine:
+    1. Check official corporate action registry / circulars where available.
+    2. Triple Fingerprint for standard splits and 1:2 bonus issues:
+       - Tight ratio band around (1/ratio)
+       - The Open Price check (confirms exchange adjusted base price pre-open)
+       - The Intraday Stability check (genuine corporate actions trade calmly; crashes bleed heavily)
+       - The Ceiling check (day's high never approached yesterday's unadjusted price)
     Automatically registers newly detected actions in data/corporate_actions.json.
     """
     import json
-    ca_path = os.path.join(os.path.dirname(__file__), "..", "data", "corporate_actions.json")
-    if not os.path.exists(ca_path):
-        ca_path = "data/corporate_actions.json"
+    if ca_path is None:
+        ca_path = os.path.join(os.path.dirname(__file__), "..", "data", "corporate_actions.json")
+        if not os.path.exists(ca_path):
+            ca_path = "data/corporate_actions.json"
         
     existing_actions = []
     if os.path.exists(ca_path):
@@ -167,6 +212,8 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
     register_etf_filter_duckdb(con)
     etf_clause = get_etf_exclusion_sql_clause("TRIM(Symbol)")
 
+    official_registry = official_actions if official_actions is not None else fetch_official_nse_corporate_actions()
+
     query = f"""
     WITH daily_candidates AS (
         SELECT 
@@ -174,9 +221,15 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
             TRIM(Series) as series,
             strptime(TRIM(DateStr), '%d-%b-%Y')::DATE as trade_date,
             PrevClose as prev_close,
+            Open as open,
+            High as high,
+            Low as low,
             Close as close,
             Volume as volume,
-            (Close / NULLIF(PrevClose, 0)) as drop_ratio
+            (Close / NULLIF(PrevClose, 0)) as drop_ratio,
+            (Open / NULLIF(PrevClose, 0)) as open_ratio,
+            (High / NULLIF(PrevClose, 0)) as high_ratio,
+            (abs(Close - Open) / NULLIF(Open, 0)) as intraday_vol
         FROM daily_source
         WHERE TRIM(Series) IN ('EQ', 'BE')
           AND {etf_clause}
@@ -184,7 +237,7 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
           AND PrevClose > 0
           AND (Close / NULLIF(PrevClose, 0)) <= 0.72
     )
-    SELECT symbol, trade_date, prev_close, close, volume, drop_ratio
+    SELECT symbol, trade_date, prev_close, open, high, low, close, volume, drop_ratio, open_ratio, high_ratio, intraday_vol
     FROM daily_candidates
     """
     try:
@@ -195,7 +248,7 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
 
     new_actions = []
     for row in candidates:
-        sym, t_date, prev_c, close_c, vol, r = row
+        sym, t_date, prev_c, open_c, high_c, low_c, close_c, vol, r, r_open, r_high, intra_vol = row
         sym_clean = sym.strip().upper()
         date_str = str(t_date)
         
@@ -206,21 +259,63 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
         ratio = None
         desc = None
         
-        # Match standard split / bonus ratios
-        if 0.07 <= r <= 0.13:
-            action_type, ratio, desc = "SPLIT", 10.0, "10:1 Stock Split (auto-detected)"
-        elif 0.17 <= r <= 0.23:
-            action_type, ratio, desc = "SPLIT", 5.0, "5:1 Stock Split (auto-detected)"
-        elif 0.23 < r <= 0.28:
-            action_type, ratio, desc = "SPLIT", 4.0, "4:1 Stock Split (auto-detected)"
-        elif 0.30 <= r <= 0.36:
-            action_type, ratio, desc = "BONUS", 3.0, "2:1 Bonus Issue (auto-detected)"
-        elif 0.37 <= r <= 0.44:
-            action_type, ratio, desc = "SPLIT", 2.5, "5:2 Stock Split (auto-detected)"
-        elif 0.46 <= r <= 0.54:
-            action_type, ratio, desc = "SPLIT", 2.0, "2:1 Stock Split (auto-detected)"
-        elif 0.62 <= r <= 0.70:
-            action_type, ratio, desc = "BONUS", 1.5, "1:2 Bonus Issue (auto-detected)"
+        # Multi-Gate Corporate Action Engine:
+        # Gate 1: Check Official Corporate Action Registry / Circulars where available
+        official_entry = official_registry.get((sym_clean, date_str))
+        if official_entry:
+            official_subj = official_entry.get('subject', '').strip()
+            subj_upper = official_subj.upper()
+            
+            # If official action is explicitly non-split/bonus (e.g. Dividend, AGM, Interest), reject immediately
+            if any(t in subj_upper for t in ['DIVIDEND', 'AGM', 'INTEREST', 'MEETING', 'BUYBACK']) and not any(t in subj_upper for t in ['SPLIT', 'SUB-DIVISION', 'SUB DIVISION', 'BONUS']):
+                print(f"  ℹ️ [OFFICIAL-REJECT] {sym_clean} on {date_str} has official circular '{official_subj}' (non-split/bonus). Rejecting as corporate action.")
+                continue
+                
+            # If official action confirms Split or Bonus, verify price consistency
+            if any(t in subj_upper for t in ['SPLIT', 'SUB-DIVISION', 'SUB DIVISION', 'BONUS']):
+                if 0.07 <= r <= 0.13 and 0.07 <= r_open <= 0.15 and r_high <= 0.20:
+                    action_type, ratio, desc = "SPLIT", 10.0, f"10:1 Stock Split (NSE Circular: {official_subj})"
+                elif 0.17 <= r <= 0.23 and 0.17 <= r_open <= 0.25 and r_high <= 0.35:
+                    action_type, ratio, desc = "SPLIT", 5.0, f"5:1 Stock Split (NSE Circular: {official_subj})"
+                elif 0.23 < r <= 0.28 and 0.23 < r_open <= 0.30 and r_high <= 0.40:
+                    action_type, ratio, desc = "SPLIT", 4.0, f"4:1 Stock Split (NSE Circular: {official_subj})"
+                elif 0.30 <= r <= 0.36 and 0.30 <= r_open <= 0.38 and r_high <= 0.50:
+                    action_type, ratio, desc = "BONUS", 3.0, f"2:1 Bonus Issue (NSE Circular: {official_subj})"
+                elif 0.37 <= r <= 0.44 and 0.35 <= r_open <= 0.48 and r_high <= 0.60:
+                    action_type, ratio, desc = "SPLIT", 2.5, f"5:2 Stock Split (NSE Circular: {official_subj})"
+                elif 0.46 <= r <= 0.54 and 0.45 <= r_open <= 0.58 and r_high <= 0.70:
+                    act = "BONUS" if "BONUS" in subj_upper else "SPLIT"
+                    desc_str = f"1:1 Bonus Issue (NSE Circular: {official_subj})" if "BONUS" in subj_upper else f"2:1 Stock Split (NSE Circular: {official_subj})"
+                    action_type, ratio, desc = act, 2.0, desc_str
+                elif 0.63 <= r <= 0.70 and 0.63 <= r_open <= 0.70 and r_high <= 0.75:
+                    action_type, ratio, desc = "BONUS", 1.5, f"1:2 Bonus Issue (NSE Circular: {official_subj})"
+        
+        # Gate 2: Local Multi-Gate Heuristic (Triple Fingerprint) if not already classified by official circular
+        if not action_type:
+            # 10:1 Stock Split (ratio 10.0, expected 0.10)
+            if 0.07 <= r <= 0.13 and 0.07 <= r_open <= 0.13 and r_high <= 0.18 and intra_vol <= 0.15:
+                action_type, ratio, desc = "SPLIT", 10.0, "10:1 Stock Split (auto-detected)"
+            # 5:1 Stock Split (ratio 5.0, expected 0.20)
+            elif 0.17 <= r <= 0.23 and 0.17 <= r_open <= 0.23 and r_high <= 0.30 and intra_vol <= 0.15:
+                action_type, ratio, desc = "SPLIT", 5.0, "5:1 Stock Split (auto-detected)"
+            # 4:1 Stock Split (ratio 4.0, expected 0.25)
+            elif 0.23 < r <= 0.28 and 0.23 < r_open <= 0.28 and r_high <= 0.35 and intra_vol <= 0.15:
+                action_type, ratio, desc = "SPLIT", 4.0, "4:1 Stock Split (auto-detected)"
+            # 2:1 Bonus Issue (ratio 3.0, expected 0.333)
+            elif 0.30 <= r <= 0.36 and 0.30 <= r_open <= 0.36 and r_high <= 0.45 and intra_vol <= 0.15:
+                action_type, ratio, desc = "BONUS", 3.0, "2:1 Bonus Issue (auto-detected)"
+            # 5:2 Stock Split (ratio 2.5, expected 0.40)
+            elif 0.37 <= r <= 0.44 and 0.35 <= r_open <= 0.45 and r_high <= 0.55 and intra_vol <= 0.15:
+                action_type, ratio, desc = "SPLIT", 2.5, "5:2 Stock Split (auto-detected)"
+            # 2:1 Stock Split / 1:1 Bonus (ratio 2.0, expected 0.50)
+            elif 0.46 <= r <= 0.54 and 0.46 <= r_open <= 0.56 and r_high <= 0.65 and intra_vol <= 0.15:
+                action_type, ratio, desc = "SPLIT", 2.0, "2:1 Stock Split (auto-detected)"
+            # 1:2 Bonus Issue (ratio 1.5, expected 0.6667) - STRICT TRIPLE FINGERPRINT:
+            elif (0.645 <= r <= 0.685 and 
+                  0.645 <= r_open <= 0.685 and 
+                  intra_vol <= 0.04 and 
+                  r_high <= 0.72):
+                action_type, ratio, desc = "BONUS", 1.5, "1:2 Bonus Issue (auto-detected)"
             
         if action_type and ratio:
             new_record = {
@@ -233,7 +328,9 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
             existing_actions.append(new_record)
             existing_keys.add((sym_clean, date_str))
             new_actions.append(new_record)
-            print(f"  🔍 [AUTO-DETECT] Detected corporate action for {sym_clean}: {action_type} {ratio}x on {date_str} (drop ratio: {r:.3f})")
+            print(f"  🔍 [AUTO-DETECT] Detected corporate action for {sym_clean}: {action_type} {ratio}x on {date_str} (drop ratio: {r:.3f}, open: {r_open:.3f}, intra: {intra_vol*100:.1f}%)")
+        elif (sym_clean, date_str) not in existing_keys and r <= 0.72:
+            print(f"  ℹ️ [SPLIT-REJECTED] Rejected candidate {sym_clean} on {date_str}: drop={r:.3f}, open={r_open:.3f}, high={r_high:.3f}, intra={intra_vol*100:.1f}%. Not an adjusted corporate action.")
 
     if new_actions:
         existing_actions.sort(key=lambda x: (x.get('ex_date', ''), x.get('symbol', '')))

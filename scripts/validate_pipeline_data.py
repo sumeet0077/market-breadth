@@ -371,7 +371,36 @@ def validate_pipeline_data():
     else:
         print("  ✅ INDIAGLYCO never appeared in low52w post-split (2026-09-02 onwards)")
 
-    # Check 7: Audit all registered actions against artificial unadjusted split plunge
+    # Check 7: POLICYBZR on crash date (2026-09-24)
+    session_pb = drill_2026.get("2026-09-24", {})
+    if session_pb:
+        down45_pb = [item for item in session_pb.get("down45", []) if item[0] == "POLICYBZR"]
+        if len(down45_pb) == 0:
+            print("  ❌ POLICYBZR missing from down45 on 2026-09-24 crash session!")
+            ca_errors += 1
+        else:
+            pb_ret = down45_pb[0][2]
+            if pb_ret > -30.0:
+                print(f"  ❌ POLICYBZR return masked on 2026-09-24 ({pb_ret:.2f}% vs expected ~ -36.00%)!")
+                ca_errors += 1
+            else:
+                print(f"  ✅ POLICYBZR accurately captured in down45 on 2026-09-24 with true plunge return ({pb_ret:.2f}%)")
+
+        high52w_pb = [item for item in session_pb.get("high52w", []) if item[0] == "POLICYBZR"]
+        if len(high52w_pb) > 0:
+            print(f"  ❌ POLICYBZR falsely appeared in high52w on crash date 2026-09-24: {high52w_pb}")
+            ca_errors += 1
+        else:
+            print("  ✅ POLICYBZR cleanly excluded from high52w on crash date 2026-09-24")
+
+        low52w_pb = [item for item in session_pb.get("low52w", []) if item[0] == "POLICYBZR"]
+        if len(low52w_pb) == 0:
+            print("  ❌ POLICYBZR missing from low52w on 2026-09-24 crash date!")
+            ca_errors += 1
+        else:
+            print("  ✅ POLICYBZR correctly included in low52w on 2026-09-24 crash date")
+
+    # Check 8: Audit all registered actions against artificial unadjusted split plunge
     ca_path = os.path.join(os.path.dirname(__file__), "..", "data", "corporate_actions.json")
     all_cas = []
     if os.path.exists(ca_path):
@@ -395,9 +424,10 @@ def validate_pipeline_data():
                         print(f"  ❌ {sym} has an unadjusted split plunge on ex-date {ex_d}: {pct*100:.2f}% (unadjusted baseline: {unadj_drop*100:.2f}%)")
                         ca_errors += 1
 
-    # Invariant 4B: Active fail-closed scan for ANY unregistered single-day drop <= -28%
+    # Invariant 4B: Active fail-closed scan for ANY unregistered split drop (drop <= -28% with open gap)
     registered_keys = {(ca['symbol'].strip().upper(), ca['ex_date']) for ca in all_cas}
     unregistered_split_drops = 0
+    con = duckdb.connect()
     for yr, yr_data in annual_drilldowns.items():
         if int(yr) < 2026:
             continue
@@ -407,16 +437,82 @@ def validate_pipeline_data():
                 pct1d = item[2]
                 if pct1d <= -28.0:
                     if (sym, d_str) not in registered_keys and not sym.endswith("-RE"):
-                        print(f"  🚨 Invariant 4B Violation: Unregistered split drop for {sym} on {d_str} ({pct1d:.2f}%). Must be registered in corporate_actions.json!")
-                        unregistered_split_drops += 1
+                        # Differentiate between unadjusted split drop (opened down at split ratio)
+                        # vs genuine intraday market crash (e.g. POLICYBZR plunged -36%)
+                        cand_row = con.execute(f"""
+                            SELECT open, high, low, close, prev_close 
+                            FROM read_parquet('{parquet_dir}/**/*.parquet', union_by_name=true)
+                            WHERE symbol = ? AND CAST(trade_date AS DATE) = ?::DATE
+                            LIMIT 1
+                        """, [sym, d_str]).fetchone()
+                        if cand_row:
+                            c_o, c_h, c_l, c_c, c_pc = cand_row
+                            r_open = (c_o / c_pc) if (c_pc and c_pc > 0) else 1.0
+                            r_high = (c_h / c_pc) if (c_pc and c_pc > 0) else 1.0
+                            intra_vol = abs(c_c - c_o) / c_o if (c_o and c_o > 0) else 0.0
+                            if r_open <= 0.72 and r_high <= 0.75:
+                                print(f"  🚨 Invariant 4B Violation: Unregistered split drop for {sym} on {d_str} ({pct1d:.2f}%, open_ratio={r_open:.3f}). Must be registered in corporate_actions.json!")
+                                unregistered_split_drops += 1
+                            else:
+                                print(f"  ℹ️ [Market Plunge Verified] {sym} on {d_str} dropped {pct1d:.2f}% (open_ratio={r_open:.3f}, intraday_drop={intra_vol*100:.1f}%) - Verified genuine crash, NOT an unadjusted corporate action.")
+                        else:
+                            print(f"  🚨 Invariant 4B Violation: Unregistered split drop for {sym} on {d_str} ({pct1d:.2f}%). Must be registered in corporate_actions.json!")
+                            unregistered_split_drops += 1
     if unregistered_split_drops > 0:
         ca_errors += unregistered_split_drops
+
+    # Invariant 4C: Unadjusted Price Baseline Test
+    # A stock cannot be declared a 52-Week High based solely on a freshly auto-detected corporate action factor
+    # if its raw unadjusted price did not also breach the unadjusted 52-week high,
+    # while preserving legitimate Climax Tops (stocks that genuinely hit ATH in the morning and collapsed intraday).
+    auto_detected_cas = {(ca['symbol'].strip().upper(), ca['ex_date']) for ca in all_cas if 'auto-detected' in ca.get('description', '').lower()}
+    raw_highs_lookup = {}
+    if auto_detected_cas:
+        auto_syms = list({s for s, _ in auto_detected_cas})
+        placeholders = ", ".join(["?"] * len(auto_syms))
+        raw_high_query = f"""
+        WITH raw_prices AS (
+            SELECT 
+                symbol,
+                CAST(trade_date AS DATE) as d,
+                high,
+                MAX(high) OVER (
+                    PARTITION BY symbol 
+                    ORDER BY CAST(trade_date AS DATE) 
+                    ROWS BETWEEN 252 PRECEDING AND 1 PRECEDING
+                ) as prior_raw_high52w
+            FROM read_parquet('{parquet_dir}/**/*.parquet', union_by_name=true)
+            WHERE series IN ('EQ', 'BE', 'BZ')
+              AND symbol IN ({placeholders})
+        )
+        SELECT symbol, d::VARCHAR, high, prior_raw_high52w
+        FROM raw_prices
+        """
+        for r_sym, r_d, r_h, r_prior_h in con.execute(raw_high_query, auto_syms).fetchall():
+            raw_highs_lookup[(r_sym, r_d)] = (r_h, r_prior_h)
+    con.close()
+
+    inv4c_errors = 0
+    for yr, yr_data in annual_drilldowns.items():
+        for d_str, session_data in yr_data.items():
+            for item in session_data.get("high52w", []):
+                sym = item[0]
+                if (sym, d_str) in auto_detected_cas:
+                    h_val, prior_h = raw_highs_lookup.get((sym, d_str), (None, None))
+                    if h_val is not None and prior_h is not None:
+                        if h_val < prior_h:
+                            print(f"  🚨 Invariant 4C Violation: {sym} falsely crowned 52-Week High on {d_str} solely via auto-detected factor (raw high {h_val:.2f} < unadjusted 52W high {prior_h:.2f})!")
+                            inv4c_errors += 1
+    if inv4c_errors > 0:
+        ca_errors += inv4c_errors
+    else:
+        print("  ✅ Invariant 4C: Unadjusted Price Baseline Test 100% CLEAN (0 false 52W highs from auto-detected actions, Climax Tops preserved)")
 
     if ca_errors > 0:
         print(f"\n❌ FAILED: {ca_errors} corporate action integrity errors detected.")
         sys.exit(1)
     else:
-        print("✅ Invariant 4: Corporate action split integrity (POCL, GOODLUCK, ANGELONE, PGIL, INDIAGLYCO + Active 4B Guard): 100% CLEAN")
+        print("✅ Invariant 4: Corporate action split integrity (POCL, GOODLUCK, ANGELONE, PGIL, INDIAGLYCO, POLICYBZR + 4B & 4C Guards): 100% CLEAN")
 
     # ----------------------------------------------------
     # 8. STRICT INVARIANT 5: Zero ETF & Rights Entitlement Leakage Guardrail

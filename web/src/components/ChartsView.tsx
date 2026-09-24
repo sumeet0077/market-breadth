@@ -73,11 +73,13 @@ export function ChartsView({ initialData, hideHeader }: ChartsViewProps) {
         if (!yearCache[year]) {
             setIsDrilldownLoading(true);
             try {
-                const res = await fetch(`/drilldowns/${year}.json?v=${Date.now()}`, { cache: 'no-store' });
-                if (res.ok) {
-                    const json: YearDrilldownMap = await res.json();
-                    setYearCache(prev => ({ ...prev, [year]: json }));
+                const res = await fetch(`/api/market-data/drilldown/${year}`, { cache: 'no-store' });
+                if (!res.ok) {
+                    const errJson = await res.json().catch(() => ({}));
+                    throw new Error(errJson.message || `Failed to load drilldown data for ${year}`);
                 }
+                const json: YearDrilldownMap = await res.json();
+                setYearCache(prev => ({ ...prev, [year]: json }));
             } catch (err) {
                 console.error(`Failed to load drilldown data for ${year}:`, err);
             } finally {

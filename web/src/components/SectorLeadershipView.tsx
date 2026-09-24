@@ -235,18 +235,18 @@ export function SectorLeadershipView({
 
     // Sort Results
     result.sort((a, b) => {
-      let valA: any = a[sortField];
-      let valB: any = b[sortField];
+      const valA: unknown = a[sortField];
+      const valB: unknown = b[sortField];
 
       if (sortField === "symbol") {
-        valA = a.symbol || "";
-        valB = b.symbol || "";
-        return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        const strA = String(a.symbol || "");
+        const strB = String(b.symbol || "");
+        return sortAsc ? strA.localeCompare(strB) : strB.localeCompare(strA);
       }
 
-      valA = Number(valA) || 0;
-      valB = Number(valB) || 0;
-      return sortAsc ? valA - valB : valB - valA;
+      const numA = Number(valA) || 0;
+      const numB = Number(valB) || 0;
+      return sortAsc ? numA - numB : numB - numA;
     });
 
     return result;
