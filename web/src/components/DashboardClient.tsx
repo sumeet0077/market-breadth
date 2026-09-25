@@ -27,7 +27,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { signOut } from "@/lib/auth/auth-client";
+import { signOut, useSession } from "@/lib/auth/auth-client";
 
 interface PlaybookDirectives {
   scenarioTitle: string;
@@ -176,7 +176,9 @@ interface DashboardClientProps {
   user?: DashboardUser | null;
 }
 
-export function DashboardClient({ initialData, initialTab, user }: DashboardClientProps) {
+export function DashboardClient({ initialData, initialTab, user: propUser }: DashboardClientProps) {
+  const { data: session } = useSession();
+  const user = propUser || session?.user;
   // Navigation Tabs: 'heatmap' | 'sectors' | 'charts'
   const [activeTab, setActiveTab] = useState<"heatmap" | "sectors" | "charts">(initialTab || "heatmap");
 
@@ -647,7 +649,7 @@ export function DashboardClient({ initialData, initialTab, user }: DashboardClie
                   {user.name || user.email?.split("@")[0] || "Trader"}
                 </span>
                 <span className="text-[9px] font-mono text-cyan-400 font-bold leading-tight">
-                  {user.plan || "PRO"}
+                  {(user as DashboardUser)?.plan || "PRO"}
                 </span>
               </div>
               <button
