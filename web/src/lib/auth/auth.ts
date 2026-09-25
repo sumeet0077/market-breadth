@@ -63,6 +63,12 @@ export const auth = betterAuth({
       ipAddressHeaders: ["x-real-ip", "cf-connecting-ip", "x-forwarded-for"],
     },
   },
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60, // 5 minutes signed cookie cache (zero DB queries on page reload)
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
