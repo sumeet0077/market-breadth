@@ -73,6 +73,8 @@ function LoginForm() {
           res.error.message?.toLowerCase().includes("try again later");
         if (isRateLimit) {
           setErrorMessage("Too many login attempts. Please wait a moment and try again.");
+        } else if (res.error.status === 500) {
+          setErrorMessage("Unable to reach the authentication database. If you are using Supabase Free Tier, please ensure your project is unpaused in the Supabase Dashboard.");
         } else if (res.error.status === 401 || res.error.message?.toLowerCase().includes("credential")) {
           setErrorMessage("Invalid institutional credentials. Please verify your email and password.");
         } else if (res.error.message?.toLowerCase().includes("verify")) {
