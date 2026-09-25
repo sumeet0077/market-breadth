@@ -182,10 +182,30 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
   // Navigation Tabs: 'heatmap' | 'sectors' | 'charts'
   const [activeTab, setActiveTab] = useState<"heatmap" | "sectors" | "charts">(initialTab || "heatmap");
 
-  // 1. State: Date Range
+  // 1. Stateful Market Data with seamless background archive hydration
+  const [data, setData] = useState<MarketData[]>(initialData);
+
+  useEffect(() => {
+    // If initialData was sliced for instant initial paint, fetch full historical dataset in background
+    if (data.length < 2000) {
+      fetch("/api/market-data/breadth")
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to load historical data");
+          return res.json();
+        })
+        .then((fullData) => {
+          if (Array.isArray(fullData) && fullData.length > data.length) {
+            setData(fullData);
+          }
+        })
+        .catch((err) => console.warn("[Background History Sync]:", err));
+    }
+  }, [data.length]);
+
+  // Date Range state
   const sortedByDate = useMemo(
-    () => [...initialData].sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime()),
-    [initialData]
+    () => [...data].sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime()),
+    [data]
   );
 
   const maxDate = sortedByDate[0]?.Date || new Date().toISOString().split("T")[0];
@@ -227,11 +247,11 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
   // Year quick selector
   const availableYears = useMemo(() => {
     const years = new Set<string>();
-    initialData.forEach((d) => {
+    data.forEach((d) => {
       if (d.Date) years.add(d.Date.split("-")[0]);
     });
     return Array.from(years).sort((a, b) => b.localeCompare(a));
-  }, [initialData]);
+  }, [data]);
 
   const handleSelectYear = (year: string) => {
     setStartDate(`${year}-01-01`);
@@ -339,7 +359,7 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
     setDrilldownState((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
-  const allAvailableDates = useMemo(() => initialData.map((d) => d.Date), [initialData]);
+  const allAvailableDates = useMemo(() => data.map((d) => d.Date), [data]);
 
   const currentYear = drilldownState.date ? drilldownState.date.split("-")[0] : "";
   const currentDayData = (currentYear && yearCache[currentYear]?.[drilldownState.date]) || null;
@@ -369,7 +389,7 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
     const effectiveStart = Math.min(s, e);
     const effectiveEnd = Math.max(s, e);
 
-    return initialData.filter((d) => {
+    return data.filter((d) => {
       const t = new Date(d.Date).getTime();
       if (t < effectiveStart || t > effectiveEnd) return false;
 
@@ -392,7 +412,7 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
       }
       return true;
     });
-  }, [initialData, startDate, endDate, signalFilter]);
+  }, [data, startDate, endDate, signalFilter]);
 
   // 3. Derived KPI Logic
   const [inspectedDate, setInspectedDate] = useState<string | null>(null);
@@ -402,12 +422,12 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
     [filteredData]
   );
 
-  const latestView = sortedFiltered[0] || initialData[0];
+  const latestView = sortedFiltered[0] || data[0];
   const prevView = sortedFiltered[1] || latestView;
 
   // Active View for Macro Banner & KPIs
   const activeView = inspectedDate
-    ? initialData.find((d) => d.Date === inspectedDate) || latestView
+    ? data.find((d) => d.Date === inspectedDate) || latestView
     : latestView;
 
   const activePrevView = useMemo(() => {
@@ -497,7 +517,7 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
         setIsMatcherOpen((prev) => !prev);
       } else if (e.key === "ArrowLeft" || e.key === "[") {
         e.preventDefault();
-        const allDatesDesc = initialData.map((d) => d.Date);
+        const allDatesDesc = data.map((d) => d.Date);
         const curDate = inspectedDate || maxDate;
         const idx = allDatesDesc.indexOf(curDate);
         if (idx < allDatesDesc.length - 1) {
@@ -505,7 +525,7 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
         }
       } else if (e.key === "ArrowRight" || e.key === "]") {
         e.preventDefault();
-        const allDatesDesc = initialData.map((d) => d.Date);
+        const allDatesDesc = data.map((d) => d.Date);
         const curDate = inspectedDate || maxDate;
         const idx = allDatesDesc.indexOf(curDate);
         if (idx > 0) {
@@ -516,7 +536,7 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [drilldownState.isOpen, router, inspectedDate, maxDate, initialData, handleReset]);
+  }, [drilldownState.isOpen, router, inspectedDate, maxDate, data, handleReset]);
 
   // Pre-fetch active year drilldown for Sector Leadership view
   const activeYear = activeView?.Date ? activeView.Date.split("-")[0] : "";
@@ -681,7 +701,7 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
           }
         />
       ) : activeTab === "charts" ? (
-        <ChartsView initialData={initialData} hideHeader={true} />
+        <ChartsView initialData={data} hideHeader={true} />
       ) : (
         <>
           {/* Controls & Filter Toolbar (2-Tier Layout Matching Mockup) */}
@@ -1214,7 +1234,7 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
         isOpen={isMatcherOpen}
         onClose={() => setIsMatcherOpen(false)}
         currentDate={activeView?.Date || maxDate}
-        allData={initialData}
+        allData={data}
       />
 
       {/* Power-Trader Keyboard Shortcuts Modal */}

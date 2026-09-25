@@ -18,10 +18,11 @@ export default function Home() {
   }
 
   const sortedData = data.sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime());
+  const initialSlice = sortedData.slice(0, 300);
 
   return (
     <main className="min-h-screen p-3 md:p-6 space-y-6 max-w-[1880px] mx-auto">
-      <DashboardClient initialData={sortedData} />
+      <DashboardClient initialData={initialSlice} />
     </main>
   );
 }
