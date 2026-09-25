@@ -22,15 +22,25 @@ export function GoogleOAuthButton({ callbackUrl = "/", onError }: GoogleOAuthBut
 
       if (res?.error) {
         setIsLoading(false);
+        const errText = res.error.message?.toLowerCase() || "";
         const msg =
-          res.error.message ||
-          "Google authentication failed. Please verify Google OAuth credentials.";
+          errText.includes("provider") || errText.includes("not found") || errText.includes("disabled")
+            ? "Google Sign-In is not configured on this server yet. Please use institutional email credentials."
+            : res.error.status === 429 || errText.includes("too many requests")
+            ? "Too many sign-in attempts. Please wait a moment and try again."
+            : res.error.message ||
+              "Google authentication failed. Please verify Google OAuth credentials.";
         if (onError) onError(msg);
       }
     } catch (err: unknown) {
       setIsLoading(false);
+      const errText = err instanceof Error ? err.message.toLowerCase() : "";
       const msg =
-        err instanceof Error ? err.message : "Google authentication failed. Check configuration.";
+        errText.includes("too many requests")
+          ? "Too many sign-in attempts. Please wait a moment and try again."
+          : err instanceof Error
+          ? err.message
+          : "Google authentication failed. Check configuration.";
       if (onError) onError(msg);
     }
   };

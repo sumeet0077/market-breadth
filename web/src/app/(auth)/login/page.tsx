@@ -67,7 +67,13 @@ function LoginForm() {
       });
 
       if (res.error) {
-        if (res.error.status === 401 || res.error.message?.toLowerCase().includes("credential")) {
+        const isRateLimit =
+          res.error.status === 429 ||
+          res.error.message?.toLowerCase().includes("too many requests") ||
+          res.error.message?.toLowerCase().includes("try again later");
+        if (isRateLimit) {
+          setErrorMessage("Too many login attempts. Please wait a moment and try again.");
+        } else if (res.error.status === 401 || res.error.message?.toLowerCase().includes("credential")) {
           setErrorMessage("Invalid institutional credentials. Please verify your email and password.");
         } else if (res.error.message?.toLowerCase().includes("verify")) {
           setErrorMessage("Email not verified. Please check your inbox for the activation link.");
@@ -209,6 +215,19 @@ function LoginForm() {
               className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-200 placeholder-slate-600 focus:outline-none transition-all"
             />
           </div>
+        </div>
+
+        {/* Quick Demo Access Helper */}
+        <div className="flex items-center justify-between text-[11px] px-0.5">
+          <button
+            type="button"
+            onClick={handleDemoFill}
+            className="text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-1.5 cursor-pointer font-medium"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Fill Demo Credentials</span>
+          </button>
+          <span className="font-mono text-[10px] text-slate-500">Demo1234!</span>
         </div>
 
         <button

@@ -115,6 +115,20 @@ test("Better Auth Instance: Initialized with required auth methods and options",
   assert.ok(typeof auth.api.signInEmail === "function", "signInEmail must be a function");
 });
 
+test("Better Auth Rate Limiting & IP Resolution: Configured for production stability", () => {
+  const options = (auth as unknown as { options: Record<string, unknown> }).options;
+  assert.ok(options.rateLimit, "Rate limiting options must be configured");
+  const rateLimit = options.rateLimit as { window: number; max: number; customRules?: Record<string, unknown> };
+  assert.strictEqual(rateLimit.window, 60, "Rate limit window must be 60 seconds");
+  assert.strictEqual(rateLimit.max, 120, "Rate limit default max must be 120");
+  assert.ok(rateLimit.customRules?.["/sign-in/*"], "Custom rate limit rule for /sign-in/* must exist");
+
+  const advanced = options.advanced as { ipAddress?: { ipAddressHeaders?: string[] } };
+  assert.ok(advanced?.ipAddress?.ipAddressHeaders, "ipAddressHeaders must be configured");
+  assert.ok(advanced.ipAddress.ipAddressHeaders.includes("x-real-ip"), "Must include x-real-ip for Vercel");
+  assert.ok(advanced.ipAddress.ipAddressHeaders.includes("cf-connecting-ip"), "Must include cf-connecting-ip for Cloudflare");
+});
+
 test("Database SSL Configuration: Supabase and remote URLs require SSL even in local development", () => {
   const determineSsl = (url: string) => {
     const isLocal =

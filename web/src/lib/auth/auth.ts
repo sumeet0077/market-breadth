@@ -33,6 +33,36 @@ export const auth = betterAuth({
     "https://*.quantbreadth.com",
     "https://*.vercel.app",
   ],
+  rateLimit: {
+    enabled:
+      process.env.NODE_ENV === "production" &&
+      process.env.BETTER_AUTH_DISABLE_RATE_LIMIT !== "true",
+    window: 60,
+    max: 120,
+    customRules: {
+      "/sign-in/*": {
+        window: 60,
+        max: 30,
+      },
+      "/sign-up/*": {
+        window: 60,
+        max: 20,
+      },
+      "/forget-password": {
+        window: 60,
+        max: 10,
+      },
+      "/change-password": {
+        window: 60,
+        max: 10,
+      },
+    },
+  },
+  advanced: {
+    ipAddress: {
+      ipAddressHeaders: ["x-real-ip", "cf-connecting-ip", "x-forwarded-for"],
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
