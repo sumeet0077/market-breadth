@@ -283,7 +283,7 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
                     action_type, ratio, desc = "BONUS", 3.0, f"2:1 Bonus Issue (NSE Circular: {official_subj})"
                 elif 0.37 <= r <= 0.44 and 0.35 <= r_open <= 0.48 and r_high <= 0.60:
                     action_type, ratio, desc = "SPLIT", 2.5, f"5:2 Stock Split (NSE Circular: {official_subj})"
-                elif 0.46 <= r <= 0.54 and 0.45 <= r_open <= 0.58 and r_high <= 0.70:
+                elif 0.40 <= r <= 0.60 and 0.40 <= r_open <= 0.60 and r_high <= 0.70:
                     act = "BONUS" if "BONUS" in subj_upper else "SPLIT"
                     desc_str = f"1:1 Bonus Issue (NSE Circular: {official_subj})" if "BONUS" in subj_upper else f"2:1 Stock Split (NSE Circular: {official_subj})"
                     action_type, ratio, desc = act, 2.0, desc_str
@@ -296,19 +296,19 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
             if 0.07 <= r <= 0.13 and 0.07 <= r_open <= 0.13 and r_high <= 0.18 and intra_vol <= 0.15:
                 action_type, ratio, desc = "SPLIT", 10.0, "10:1 Stock Split (auto-detected)"
             # 5:1 Stock Split (ratio 5.0, expected 0.20)
-            elif 0.17 <= r <= 0.23 and 0.17 <= r_open <= 0.23 and r_high <= 0.30 and intra_vol <= 0.15:
+            elif 0.16 <= r <= 0.24 and 0.16 <= r_open <= 0.24 and r_high <= 0.32 and intra_vol <= 0.15:
                 action_type, ratio, desc = "SPLIT", 5.0, "5:1 Stock Split (auto-detected)"
             # 4:1 Stock Split (ratio 4.0, expected 0.25)
-            elif 0.23 < r <= 0.28 and 0.23 < r_open <= 0.28 and r_high <= 0.35 and intra_vol <= 0.15:
+            elif 0.21 <= r <= 0.29 and 0.21 <= r_open <= 0.29 and r_high <= 0.36 and intra_vol <= 0.15:
                 action_type, ratio, desc = "SPLIT", 4.0, "4:1 Stock Split (auto-detected)"
             # 2:1 Bonus Issue (ratio 3.0, expected 0.333)
-            elif 0.30 <= r <= 0.36 and 0.30 <= r_open <= 0.36 and r_high <= 0.45 and intra_vol <= 0.15:
+            elif 0.29 <= r <= 0.37 and 0.29 <= r_open <= 0.37 and r_high <= 0.46 and intra_vol <= 0.15:
                 action_type, ratio, desc = "BONUS", 3.0, "2:1 Bonus Issue (auto-detected)"
             # 5:2 Stock Split (ratio 2.5, expected 0.40)
-            elif 0.37 <= r <= 0.44 and 0.35 <= r_open <= 0.45 and r_high <= 0.55 and intra_vol <= 0.15:
+            elif 0.35 <= r <= 0.44 and 0.35 <= r_open <= 0.45 and r_high <= 0.55 and intra_vol <= 0.15:
                 action_type, ratio, desc = "SPLIT", 2.5, "5:2 Stock Split (auto-detected)"
             # 2:1 Stock Split / 1:1 Bonus (ratio 2.0, expected 0.50)
-            elif 0.46 <= r <= 0.54 and 0.46 <= r_open <= 0.56 and r_high <= 0.65 and intra_vol <= 0.15:
+            elif 0.42 <= r <= 0.58 and 0.42 <= r_open <= 0.58 and r_high <= 0.66 and intra_vol <= 0.15:
                 action_type, ratio, desc = "SPLIT", 2.0, "2:1 Stock Split (auto-detected)"
             # 1:2 Bonus Issue (ratio 1.5, expected 0.6667) - STRICT TRIPLE FINGERPRINT:
             elif (0.645 <= r <= 0.685 and 
