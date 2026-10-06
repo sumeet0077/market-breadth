@@ -267,7 +267,7 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
             subj_upper = official_subj.upper()
             
             # If official action is explicitly non-split/bonus (e.g. Dividend, AGM, Interest), reject immediately
-            if any(t in subj_upper for t in ['DIVIDEND', 'AGM', 'INTEREST', 'MEETING', 'BUYBACK']) and not any(t in subj_upper for t in ['SPLIT', 'SUB-DIVISION', 'SUB DIVISION', 'BONUS']):
+            if any(t in subj_upper for t in ['DIVIDEND', 'AGM', 'INTEREST', 'MEETING', 'BUYBACK']) and not any(t in subj_upper for t in ['SPLIT', 'SUB-DIVISION', 'SUB DIVISION', 'BONUS', 'DEMERGER', 'ARRANGEMENT']):
                 print(f"  ℹ️ [OFFICIAL-REJECT] {sym_clean} on {date_str} has official circular '{official_subj}' (non-split/bonus). Rejecting as corporate action.")
                 continue
                 
@@ -289,6 +289,11 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
                     action_type, ratio, desc = act, 2.0, desc_str
                 elif 0.63 <= r <= 0.70 and 0.63 <= r_open <= 0.70 and r_high <= 0.75:
                     action_type, ratio, desc = "BONUS", 1.5, f"1:2 Bonus Issue (NSE Circular: {official_subj})"
+            elif any(t in subj_upper for t in ['DEMERGER', 'ARRANGEMENT', 'SPIN-OFF', 'SPIN OFF', 'CAPITAL REDUCTION']):
+                if r_open <= 0.75 and r_high <= 0.80 and intra_vol <= 0.25 and open_c > 0:
+                    demerger_ratio = round(prev_c / open_c, 4)
+                    if demerger_ratio > 1.25:
+                        action_type, ratio, desc = "SPLIT", demerger_ratio, f"Demerger / Reorganization (NSE Circular: {official_subj})"
         
         # Gate 2: Local Multi-Gate Heuristic (Triple Fingerprint) if not already classified by official circular
         if not action_type:
@@ -316,6 +321,14 @@ def detect_and_register_corporate_actions(con, local_master="data/parquet/master
                   intra_vol <= 0.04 and 
                   r_high <= 0.72):
                 action_type, ratio, desc = "BONUS", 1.5, "1:2 Bonus Issue (auto-detected)"
+            # Non-standard / Demerger Corporate Action (exchange base price adjusted pre-open):
+            elif (0.05 <= r_open <= 0.72 and 
+                  r_high <= 0.75 and 
+                  intra_vol <= 0.15 and 
+                  open_c > 0):
+                calc_ratio = round(prev_c / open_c, 4)
+                if calc_ratio >= 1.35:
+                    action_type, ratio, desc = "SPLIT", calc_ratio, "Demerger / Reorganization (auto-detected)"
             
         if action_type and ratio:
             new_record = {

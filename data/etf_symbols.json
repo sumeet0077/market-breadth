@@ -1,6 +1,6 @@
 {
   "description": "NSE Active and Historical Exchange Traded Funds (ETFs) and Exclusion Registry",
-  "count": 506,
+  "count": 507,
   "re_pattern": "-RE.*",
   "etf_symbols": [
     "ABGSEC",
@@ -221,6 +221,7 @@
     "INFRABEES",
     "INFRAIETF",
     "INIFTY",
+    "INSURADD",
     "INSUREIETF",
     "INTERNET",
     "INV20",
