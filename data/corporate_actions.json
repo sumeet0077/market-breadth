@@ -453,5 +453,19 @@
     "action": "SPLIT",
     "ratio": 7.4915,
     "description": "Demerger of Commerce Education business into JSCEL (NSE Circular: Demerger)"
+  },
+  {
+    "symbol": "BHAGYANGR",
+    "ex_date": "2026-10-08",
+    "action": "SPLIT",
+    "ratio": 11.6551,
+    "description": "Demerger / Reorganization (NSE Circular: Demerger)"
+  },
+  {
+    "symbol": "BUILDPRO",
+    "ex_date": "2026-10-08",
+    "action": "SPLIT",
+    "ratio": 5.0,
+    "description": "5:1 Stock Split (NSE Circular: Face Value Split (Sub-Division) - From Rs 10/- Per Share To Rs 2/- Per Share)"
   }
 ]
