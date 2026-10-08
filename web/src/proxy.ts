@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   "/verify-email",
   "/api/auth",
   "/api/health",
+  "/api/cron",
 ];
 
 // Static asset extensions that should bypass middleware checks

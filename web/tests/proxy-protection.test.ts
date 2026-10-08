@@ -67,6 +67,7 @@ test("Proxy: Public auth routes pass through unblocked", () => {
     "/reset-password",
     "/verify-email",
     "/api/health",
+    "/api/cron/sync-daily-data",
     "/api/auth/sign-in/email",
     "/api/auth/get-session",
   ];

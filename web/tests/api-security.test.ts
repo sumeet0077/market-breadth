@@ -81,3 +81,35 @@ test("API Security: Breadth API limit parameter is sanitized against negative or
   assert.strictEqual(sanitizeLimit("invalid"), null);
   assert.strictEqual(sanitizeLimit("100"), 100);
 });
+
+test("API Security: Cron sync route requires valid CRON_SECRET", async () => {
+  const { GET: cronSync } = await import("../src/app/api/cron/sync-daily-data/route");
+
+  // Save original env
+  const origSecret = process.env.CRON_SECRET;
+  try {
+    process.env.CRON_SECRET = "super_secret_test_token_123";
+
+    // 1. Request with no auth header
+    const reqNoAuth = new NextRequest("http://localhost:3000/api/cron/sync-daily-data");
+    const resNoAuth = await cronSync(reqNoAuth);
+    assert.strictEqual(resNoAuth.status, 401);
+
+    // 2. Request with invalid token
+    const reqBadAuth = new NextRequest("http://localhost:3000/api/cron/sync-daily-data", {
+      headers: { authorization: "Bearer wrong_token" },
+    });
+    const resBadAuth = await cronSync(reqBadAuth);
+    assert.strictEqual(resBadAuth.status, 401);
+
+    // 3. Request with valid token
+    const reqValidAuth = new NextRequest("http://localhost:3000/api/cron/sync-daily-data", {
+      headers: { authorization: "Bearer super_secret_test_token_123" },
+    });
+    const resValidAuth = await cronSync(reqValidAuth);
+    // Should pass authorization (status 200 with already_up_to_date or waiting_for_nse)
+    assert.strictEqual(resValidAuth.status, 200);
+  } finally {
+    process.env.CRON_SECRET = origSecret;
+  }
+});

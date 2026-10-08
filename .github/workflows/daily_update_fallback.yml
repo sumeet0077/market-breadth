@@ -7,12 +7,12 @@ on:
     # Offset by 10 minutes from Primary to guarantee continuous coverage even if GitHub delays one queue.
     - cron: '04,24,44 11-17 * * 1-5'
   repository_dispatch:
-    types: [daily_data_update, manual_ping, watchdog_trigger]
+    types: [fallback_trigger, watchdog_trigger]
   workflow_dispatch: # Allow manual 1-click trigger
 
 concurrency:
   group: data-pipeline-execution
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
