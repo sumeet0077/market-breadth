@@ -1,6 +1,6 @@
 {
   "description": "NSE Active and Historical Exchange Traded Funds (ETFs) and Exclusion Registry",
-  "count": 508,
+  "count": 510,
   "re_pattern": "-RE.*",
   "etf_symbols": [
     "ABGSEC",
@@ -104,6 +104,7 @@
     "ESILVER",
     "EVIETF",
     "EVINDIA",
+    "FARBEES",
     "FINIETF",
     "FLEXIADD",
     "FMCGADD",
@@ -181,6 +182,7 @@
     "HEALTHCARE",
     "HEALTHIETF",
     "HEALTHY",
+    "HFTSEINDIA",
     "HNGSNGBEES",
     "HSBCGOLD",
     "HYBRIDETF",
