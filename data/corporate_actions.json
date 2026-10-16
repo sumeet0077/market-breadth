@@ -481,5 +481,12 @@
     "action": "BONUS",
     "ratio": 2.0,
     "description": "1:1 Bonus Issue (NSE Circular: Bonus 1:1)"
+  },
+  {
+    "symbol": "BANSALWIRE",
+    "ex_date": "2026-10-16",
+    "action": "SPLIT",
+    "ratio": 5.0,
+    "description": "5:1 Stock Split (NSE Circular: Face Value Split (Sub-Division) - From Rs 5/- Per Share To Re 1/- Per Share)"
   }
 ]
