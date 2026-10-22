@@ -488,5 +488,12 @@
     "action": "SPLIT",
     "ratio": 5.0,
     "description": "5:1 Stock Split (NSE Circular: Face Value Split (Sub-Division) - From Rs 5/- Per Share To Re 1/- Per Share)"
+  },
+  {
+    "symbol": "JSWDULUX",
+    "ex_date": "2026-10-22",
+    "action": "SPLIT",
+    "ratio": 10.0,
+    "description": "10:1 Stock Split (NSE Circular: Face Value Split (Sub-Division) - From Rs 10/- Per Share To Re 1/- Per Share)"
   }
 ]
