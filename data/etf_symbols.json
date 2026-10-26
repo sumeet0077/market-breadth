@@ -1,6 +1,6 @@
 {
   "description": "NSE Active and Historical Exchange Traded Funds (ETFs) and Exclusion Registry",
-  "count": 510,
+  "count": 511,
   "re_pattern": "-RE.*",
   "etf_symbols": [
     "ABGSEC",
@@ -47,6 +47,7 @@
     "BBNPPGOLD",
     "BFSI",
     "BHARATIWIN",
+    "BIRLATOTAL",
     "BNKETFAXIS",
     "BSE500IETF",
     "BSLGOLDETF",
