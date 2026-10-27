@@ -15,7 +15,11 @@ export async function GET() {
       await db.execute(sql`SELECT 1 as healthy`);
     } catch (e: unknown) {
       dbStatus = "disconnected";
-      dbError = e instanceof Error ? e.message : String(e);
+      console.error("[Health Check Error] Database ping failed:", e);
+      dbError =
+        process.env.NODE_ENV === "production"
+          ? "Database connectivity check failed"
+          : (e instanceof Error ? e.message : String(e));
     }
 
     // 2. Check Market Breadth datasets

@@ -7,6 +7,28 @@ const fromEmail =
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 /**
+ * HTML entity encoding utility to prevent HTML/XSS injection into emails.
+ */
+function escapeHtml(str: string): string {
+  return str.replace(/[&<>"']/g, (m) => {
+    switch (m) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return m;
+    }
+  });
+}
+
+/**
  * Base email layout matching QuantBreadth™ institutional terminal aesthetic.
  */
 function baseTemplate(title: string, content: string): string {
@@ -156,12 +178,12 @@ export async function sendEmailVerification({
   name?: string;
   url: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const greeting = name ? `Hello ${name},` : "Hello,";
+  const safeGreeting = name ? `Hello ${escapeHtml(name)},` : "Hello,";
   const html = baseTemplate(
     "Verify your QuantBreadth™ Terminal Account",
     `
       <h2 style="margin-top: 0; color: #f8fafc; font-size: 20px; font-weight: 700;">Confirm your email address</h2>
-      <p>${greeting}</p>
+      <p>${safeGreeting}</p>
       <p>Thank you for creating an account with <strong>QuantBreadth™ Institutional Market Breadth Terminal</strong>. Please confirm your email address to activate your terminal session and verify your access entitlements.</p>
       
       <div class="button-container">
@@ -179,10 +201,16 @@ export async function sendEmailVerification({
   );
 
   if (!resend) {
-    console.warn(
-      `[Resend Email Mock] RESEND_API_KEY is not configured. Email verification would have been sent to: ${email}`
-    );
-    console.warn(`[Resend Email Mock] Verification Link: ${url}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `[Resend Email Mock] RESEND_API_KEY is not configured. Email verification would have been sent to: ${email}`
+      );
+      console.warn(`[Resend Email Mock] Verification Link: ${url}`);
+    } else {
+      console.warn(
+        `[Resend Email Service] RESEND_API_KEY is not configured in production. Failed to dispatch email to: ${email}`
+      );
+    }
     return { success: true };
   }
 
@@ -215,7 +243,7 @@ export async function sendPasswordResetEmail({
     "Reset your QuantBreadth™ Terminal Password",
     `
       <h2 style="margin-top: 0; color: #f8fafc; font-size: 20px; font-weight: 700;">Password Reset Request</h2>
-      <p>We received a request to reset the password for your QuantBreadth™ terminal access associated with <strong>${email}</strong>.</p>
+      <p>We received a request to reset the password for your QuantBreadth™ terminal access associated with <strong>${escapeHtml(email)}</strong>.</p>
       
       <div class="button-container">
         <a href="${url}" class="cta-button" target="_blank">Reset Terminal Password</a>
@@ -232,10 +260,16 @@ export async function sendPasswordResetEmail({
   );
 
   if (!resend) {
-    console.warn(
-      `[Resend Email Mock] RESEND_API_KEY is not configured. Password reset email would have been sent to: ${email}`
-    );
-    console.warn(`[Resend Email Mock] Reset Link: ${url}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `[Resend Email Mock] RESEND_API_KEY is not configured. Password reset email would have been sent to: ${email}`
+      );
+      console.warn(`[Resend Email Mock] Reset Link: ${url}`);
+    } else {
+      console.warn(
+        `[Resend Email Service] RESEND_API_KEY is not configured in production. Failed to dispatch password reset to: ${email}`
+      );
+    }
     return { success: true };
   }
 

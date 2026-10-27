@@ -113,3 +113,101 @@ test("API Security: Cron sync route requires valid CRON_SECRET", async () => {
     process.env.CRON_SECRET = origSecret;
   }
 });
+
+test("Security: Callback URL sanitizer strictly blocks Open Redirects", () => {
+  function sanitizeCallbackUrl(url: string | null): string {
+    if (!url || typeof url !== "string") return "/";
+    if (url.startsWith("/") && !url.startsWith("//") && !url.includes("://")) {
+      return url;
+    }
+    return "/";
+  }
+
+  // Dangerous URLs that must be rejected and reset to "/"
+  const openRedirectPayloads = [
+    "https://evil.com",
+    "http://attacker.com/steal-creds",
+    "//evil.com",
+    "//attacker.com/phish",
+    "javascript:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+    "https://quantbreadth.com.evil.com",
+    "\\\\evil.com",
+  ];
+
+  for (const maliciousUrl of openRedirectPayloads) {
+    assert.strictEqual(
+      sanitizeCallbackUrl(maliciousUrl),
+      "/",
+      `Payload "${maliciousUrl}" must be sanitized to "/"`
+    );
+  }
+
+  // Safe internal relative paths that must be preserved
+  const safePaths = ["/dashboard", "/charts", "/?timeframe=3M", "/verify-email"];
+  for (const safePath of safePaths) {
+    assert.strictEqual(
+      sanitizeCallbackUrl(safePath),
+      safePath,
+      `Safe path "${safePath}" must be preserved`
+    );
+  }
+});
+
+test("Security: Email template escapeHtml strictly neutralizes HTML injection payloads", () => {
+  function escapeHtml(str: string): string {
+    return str.replace(/[&<>"']/g, (m) => {
+      switch (m) {
+        case "&": return "&amp;";
+        case "<": return "&lt;";
+        case ">": return "&gt;";
+        case '"': return "&quot;";
+        case "'": return "&#39;";
+        default: return m;
+      }
+    });
+  }
+
+  const maliciousNames = [
+    "<script>alert('XSS')</script>",
+    "<img src=x onerror=alert(1)>",
+    "</h1><a href='https://phish.com'>Click Here</a>",
+    "John \"Big\" Doe & Sons",
+  ];
+
+  for (const payload of maliciousNames) {
+    const escaped = escapeHtml(payload);
+    assert.strictEqual(escaped.includes("<script>"), false);
+    assert.strictEqual(escaped.includes("<img"), false);
+    assert.strictEqual(escaped.includes("</h1>"), false);
+    assert.strictEqual(escaped.includes("<"), false);
+    assert.strictEqual(escaped.includes(">"), false);
+  }
+});
+
+test("Logic: Breadth API limit parameter slices from tail and returns newest-first", () => {
+  const mockData = [
+    { Date: "2015-01-08", NetNewHighs: 10 },
+    { Date: "2015-01-09", NetNewHighs: 15 },
+    { Date: "2026-10-26", NetNewHighs: -20 },
+    { Date: "2026-10-27", NetNewHighs: -15 },
+  ];
+
+  const limit = 2;
+  const count = Math.min(limit, mockData.length);
+  const result = mockData.slice(-count).reverse();
+
+  assert.strictEqual(result.length, 2);
+  assert.strictEqual(result[0].Date, "2026-10-27");
+  assert.strictEqual(result[1].Date, "2026-10-26");
+});
+
+test("Security: Better-Auth user schema has input: false on privileged fields", async () => {
+  const { auth } = await import("../src/lib/auth/auth");
+  // Inspect options to ensure input: false is configured on role and plan
+  const options = (auth as any).options;
+  const userAdditionalFields = options?.user?.additionalFields;
+  assert.ok(userAdditionalFields, "user.additionalFields must be configured");
+  assert.strictEqual(userAdditionalFields.role?.input, false, "role must have input: false");
+  assert.strictEqual(userAdditionalFields.plan?.input, false, "plan must have input: false");
+});

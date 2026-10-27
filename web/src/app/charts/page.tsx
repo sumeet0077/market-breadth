@@ -1,3 +1,6 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth/auth";
 import { MarketData } from "@/components/Heatmap";
 import { DashboardClient } from "@/components/DashboardClient";
 import fs from "fs";
@@ -8,8 +11,20 @@ export const metadata = {
   description: "Visualizing historical market breadth trends over time.",
 };
 
-// Server Component (Pre-rendered statically at build time, protected at Edge by proxy.ts)
-export default function ChartsPage() {
+// Server Component with cryptographic server-side session validation
+export default async function ChartsPage() {
+  const reqHeaders = await headers();
+  const isDemo =
+    reqHeaders.get("x-is-demo") === "true" ||
+    process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+
+  if (!isDemo) {
+    const session = await auth.api.getSession({ headers: reqHeaders });
+    if (!session || !session.user) {
+      redirect("/login?callbackUrl=/charts");
+    }
+  }
+
   let data: MarketData[] = [];
   try {
     const publicPath = path.join(process.cwd(), "public", "market_breadth.json");

@@ -17,6 +17,16 @@ const googleProvider =
       }
     : undefined;
 
+if (
+  process.env.NODE_ENV === "production" &&
+  (!process.env.BETTER_AUTH_SECRET ||
+    process.env.BETTER_AUTH_SECRET.includes("fallback_secret"))
+) {
+  throw new Error(
+    "[SECURITY FATAL] BETTER_AUTH_SECRET must be set to a secure 32+ character key in production."
+  );
+}
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -31,8 +41,11 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "https://quantbreadth.com",
     "https://*.quantbreadth.com",
-    "https://*.vercel.app",
-  ],
+    ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
+      : []),
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+  ].filter(Boolean),
   rateLimit: {
     enabled:
       process.env.NODE_ENV === "production" &&
@@ -60,7 +73,8 @@ export const auth = betterAuth({
   },
   advanced: {
     ipAddress: {
-      ipAddressHeaders: ["x-real-ip", "cf-connecting-ip", "x-forwarded-for"],
+      // x-real-ip is set by the Vercel/Cloudflare gateway and cannot be spoofed by clients
+      ipAddressHeaders: ["x-real-ip", "cf-connecting-ip"],
     },
   },
   session: {
@@ -98,10 +112,12 @@ export const auth = betterAuth({
       role: {
         type: "string",
         defaultValue: "user",
+        input: false, // Prevents mass assignment privilege escalation to admin during signup
       },
       plan: {
         type: "string",
         defaultValue: "FREE",
+        input: false, // Prevents mass assignment payment tier bypass during signup
       },
     },
   },

@@ -48,14 +48,16 @@ export async function GET(request: NextRequest) {
     const fileContent = fs.readFileSync(filePath, "utf-8");
     const data = JSON.parse(fileContent);
 
-    // Optional query parameter for limiting count or date filter
+    // Optional query parameter for limiting count (returns latest N sessions newest-first)
     const searchParams = request.nextUrl.searchParams;
     const limit = searchParams.get("limit");
     let result = data;
     if (limit) {
       const parsedLimit = parseInt(limit, 10);
       if (!isNaN(parsedLimit) && parsedLimit > 0) {
-        result = data.slice(0, Math.min(parsedLimit, data.length));
+        // Slices the most recent N sessions from chronological data and returns newest-first
+        const count = Math.min(parsedLimit, data.length);
+        result = data.slice(-count).reverse();
       }
     }
 

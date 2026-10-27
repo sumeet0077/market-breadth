@@ -8,10 +8,21 @@ import { GoogleOAuthButton } from "@/components/auth/GoogleOAuthButton";
 import { signIn, useSession } from "@/lib/auth/auth-client";
 import { Mail, Lock, Loader2, AlertCircle, ArrowRight, Sparkles } from "lucide-react";
 
+/**
+ * Sanitizes callback URL to prevent open redirect vulnerabilities.
+ */
+function sanitizeCallbackUrl(url: string | null): string {
+  if (!url || typeof url !== "string") return "/";
+  if (url.startsWith("/") && !url.startsWith("//") && !url.includes("://")) {
+    return url;
+  }
+  return "/";
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = sanitizeCallbackUrl(searchParams.get("callbackUrl"));
   const verified = searchParams.get("verified");
   const urlError = searchParams.get("error");
   const [email, setEmail] = useState(

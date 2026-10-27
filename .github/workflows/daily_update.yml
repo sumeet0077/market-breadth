@@ -112,13 +112,13 @@ jobs:
             fi
             
             # Push was rejected — remote has new commits
-            # Pull with merge (not rebase), auto-resolve conflicts in our favour
-            echo "⚠️ Push rejected. Merging remote changes (our data takes priority)..."
-            git pull origin main --no-rebase -X ours --no-edit
+            # Rebase our data commit cleanly on top of remote main
+            echo "⚠️ Push rejected. Rebasing data changes on top of remote main..."
+            git pull --rebase origin main
             
-            # Try pushing the merge commit
+            # Try pushing the rebased commit
             if git push; then
-              echo "✅ Push successful after merge!"
+              echo "✅ Push successful after rebase!"
               exit 0
             fi
             

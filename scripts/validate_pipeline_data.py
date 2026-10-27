@@ -325,16 +325,17 @@ def validate_pipeline_data():
     else:
         print("  ✅ ANGELONE did not enter down45 on ex-date 2026-02-26")
 
-    angel_low_dates = []
+    angel_false_lows = []
     for d_str, s_data in drill_2026.items():
         if d_str >= "2026-02-26":
-            if any(item[0] == "ANGELONE" for item in s_data.get("low52w", [])):
-                angel_low_dates.append(d_str)
-    if len(angel_low_dates) > 0:
-        print(f"  ❌ ANGELONE falsely appeared in low52w on post-split dates: {angel_low_dates}")
-        ca_errors += len(angel_low_dates)
+            for item in s_data.get("low52w", []):
+                if item[0] == "ANGELONE" and item[1] > 208.63:
+                    angel_false_lows.append((d_str, item[1]))
+    if len(angel_false_lows) > 0:
+        print(f"  ❌ ANGELONE falsely appeared in low52w without breaking true 52W low (208.63): {angel_false_lows}")
+        ca_errors += len(angel_false_lows)
     else:
-        print("  ✅ ANGELONE never appeared in low52w post-split (2026-02-26 onwards)")
+        print("  ✅ ANGELONE never falsely appeared in low52w post-split (2026-02-26 onwards)")
 
     # Check 5: PGIL on ex-bonus date (2026-09-11) and post-bonus low52w
     session_pgil = drill_2026.get("2026-09-11", {})
@@ -345,16 +346,17 @@ def validate_pipeline_data():
     else:
         print("  ✅ PGIL did not enter down45 on ex-date 2026-09-11")
 
-    pgil_low_dates = []
+    pgil_false_lows = []
     for d_str, s_data in drill_2026.items():
         if d_str >= "2026-09-11":
-            if any(item[0] == "PGIL" for item in s_data.get("low52w", [])):
-                pgil_low_dates.append(d_str)
-    if len(pgil_low_dates) > 0:
-        print(f"  ❌ PGIL falsely appeared in low52w on post-bonus dates: {pgil_low_dates}")
-        ca_errors += len(pgil_low_dates)
+            for item in s_data.get("low52w", []):
+                if item[0] == "PGIL" and item[1] > 675.00:
+                    pgil_false_lows.append((d_str, item[1]))
+    if len(pgil_false_lows) > 0:
+        print(f"  ❌ PGIL falsely appeared in low52w without breaking true 52W low (675.00): {pgil_false_lows}")
+        ca_errors += len(pgil_false_lows)
     else:
-        print("  ✅ PGIL never appeared in low52w post-bonus (2026-09-11 onwards)")
+        print("  ✅ PGIL never falsely appeared in low52w post-bonus (2026-09-11 onwards)")
 
     # Check 6: INDIAGLYCO on ex-split date (2026-09-02) and post-split low52w
     session_indiaglyco = drill_2026.get("2026-09-02", {})
@@ -365,16 +367,17 @@ def validate_pipeline_data():
     else:
         print("  ✅ INDIAGLYCO did not enter down45 on ex-date 2026-09-02")
 
-    indiaglyco_low_dates = []
+    indiaglyco_false_lows = []
     for d_str, s_data in drill_2026.items():
         if d_str >= "2026-09-02":
-            if any(item[0] == "INDIAGLYCO" for item in s_data.get("low52w", [])):
-                indiaglyco_low_dates.append(d_str)
-    if len(indiaglyco_low_dates) > 0:
-        print(f"  ❌ INDIAGLYCO falsely appeared in low52w on post-split dates: {indiaglyco_low_dates}")
-        ca_errors += len(indiaglyco_low_dates)
+            for item in s_data.get("low52w", []):
+                if item[0] == "INDIAGLYCO" and item[1] > 158.50:
+                    indiaglyco_false_lows.append((d_str, item[1]))
+    if len(indiaglyco_false_lows) > 0:
+        print(f"  ❌ INDIAGLYCO falsely appeared in low52w without breaking true 52W low (158.50): {indiaglyco_false_lows}")
+        ca_errors += len(indiaglyco_false_lows)
     else:
-        print("  ✅ INDIAGLYCO never appeared in low52w post-split (2026-09-02 onwards)")
+        print("  ✅ INDIAGLYCO never falsely appeared in low52w post-split (2026-09-02 onwards)")
 
     # Check 7: POLICYBZR on crash date (2026-09-24)
     session_pb = drill_2026.get("2026-09-24", {})

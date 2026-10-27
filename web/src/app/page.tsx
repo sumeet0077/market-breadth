@@ -1,10 +1,25 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth/auth";
 import { MarketData } from "@/components/Heatmap";
 import { DashboardClient } from "@/components/DashboardClient";
 import fs from "fs";
 import path from "path";
 
-// Server Component (Pre-rendered statically at build time, protected at Edge by proxy.ts)
-export default function Home() {
+// Server Component with cryptographic server-side session validation
+export default async function Home() {
+  const reqHeaders = await headers();
+  const isDemo =
+    reqHeaders.get("x-is-demo") === "true" ||
+    process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+
+  if (!isDemo) {
+    const session = await auth.api.getSession({ headers: reqHeaders });
+    if (!session || !session.user) {
+      redirect("/login");
+    }
+  }
+
   let data: MarketData[] = [];
   try {
     const publicPath = path.join(process.cwd(), "public", "market_breadth.json");

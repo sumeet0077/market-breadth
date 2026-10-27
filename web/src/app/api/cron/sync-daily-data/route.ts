@@ -2,15 +2,27 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Validates authorization against CRON_SECRET.
+ * Constant-time string comparison to prevent timing side-channel attacks.
+ */
+function safeCompare(provided: string | null | undefined, expected: string): boolean {
+  if (!provided || typeof provided !== "string") return false;
+  const bufProvided = Buffer.from(provided);
+  const bufExpected = Buffer.from(expected);
+  if (bufProvided.length !== bufExpected.length) return false;
+  return crypto.timingSafeEqual(bufProvided, bufExpected);
+}
+
+/**
+ * Validates authorization against CRON_SECRET using constant-time comparison.
  * Supports:
  * - Authorization: Bearer <CRON_SECRET>
  * - x-cron-secret: <CRON_SECRET>
- * - Query parameter: ?secret=<CRON_SECRET>
+ * - Query parameter: ?secret=<CRON_SECRET> (retained for backward compatibility)
  */
 function isAuthorized(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
@@ -24,20 +36,21 @@ function isAuthorized(request: NextRequest): boolean {
   const authHeader = request.headers.get("authorization");
   if (authHeader) {
     const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    if (token === cronSecret) {
+    if (safeCompare(token, cronSecret)) {
       return true;
     }
   }
 
   // 2. Check custom header
   const customHeader = request.headers.get("x-cron-secret");
-  if (customHeader && customHeader.trim() === cronSecret) {
+  if (customHeader && safeCompare(customHeader.trim(), cronSecret)) {
     return true;
   }
 
-  // 3. Check query param ?secret=...
+  // 3. Check query param ?secret=... (for schedulers without custom header support)
   const url = new URL(request.url);
-  if (url.searchParams.get("secret") === cronSecret) {
+  const querySecret = url.searchParams.get("secret");
+  if (querySecret && safeCompare(querySecret, cronSecret)) {
     return true;
   }
 
