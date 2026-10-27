@@ -1,6 +1,6 @@
 {
   "description": "NSE Active and Historical Exchange Traded Funds (ETFs) and Exclusion Registry",
-  "count": 511,
+  "count": 512,
   "re_pattern": "-RE.*",
   "etf_symbols": [
     "ABGSEC",
@@ -417,6 +417,7 @@
     "NXT100CASE",
     "OILIETF",
     "PHARMABEES",
+    "PHARMAIETF",
     "PSUBANK",
     "PSUBANKADD",
     "PSUBNKBEES",
