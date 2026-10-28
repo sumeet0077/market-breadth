@@ -82,6 +82,8 @@ jobs:
 
       - name: Verify Next.js Production Build
         working-directory: web
+        env:
+          BETTER_AUTH_SECRET: ci_build_verification_dummy_secret_32chars_test
         run: |
           npm ci
           npm run build

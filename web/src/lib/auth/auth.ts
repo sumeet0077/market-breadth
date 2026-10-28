@@ -17,8 +17,14 @@ const googleProvider =
       }
     : undefined;
 
+const isCI = Boolean(
+  (process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true") &&
+    !process.env.VERCEL
+);
+
 if (
   process.env.NODE_ENV === "production" &&
+  !isCI &&
   (!process.env.BETTER_AUTH_SECRET ||
     process.env.BETTER_AUTH_SECRET.includes("fallback_secret"))
 ) {

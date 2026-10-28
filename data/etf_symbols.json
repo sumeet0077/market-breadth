@@ -1,6 +1,6 @@
 {
   "description": "NSE Active and Historical Exchange Traded Funds (ETFs) and Exclusion Registry",
-  "count": 512,
+  "count": 513,
   "re_pattern": "-RE.*",
   "etf_symbols": [
     "ABGSEC",
@@ -443,6 +443,7 @@
     "RETFMID150",
     "RRSLGETF",
     "SBIBPB",
+    "SBIDEFETF",
     "SBIETFCON",
     "SBIETFIT",
     "SBIETFPB",
