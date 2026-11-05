@@ -315,6 +315,26 @@ def train_purged_walk_forward(df, feature_cols):
     df['Swing_Regime'] = df['Swing_Score'].apply(assign_regime)
     df['Swing_Prob_Followthrough'] = all_probs.round(4)
     
+    # Helper for anti-clustering cooldown (ensures suppressed signals do not reset cooldown)
+    def apply_cooldown(signal_series, cooldown_days=10):
+        result = pd.Series(False, index=signal_series.index)
+        last_signal_idx = -cooldown_days - 1
+        for i, val in enumerate(signal_series):
+            if val and (i - last_signal_idx > cooldown_days):
+                result.iloc[i] = True
+                last_signal_idx = i
+        return result
+
+    # Compute Tactical Swing Thrust & Risk Signals
+    prev_swing = df['Swing_Score'].shift(1)
+    ad_ratio = df['Advance/Decline Ratio']
+    
+    raw_thrust_buy = (df['Swing_Score'] >= 70.0) & (prev_swing < 70.0) & (ad_ratio >= 2.0)
+    df['Swing_Thrust_Buy'] = apply_cooldown(raw_thrust_buy, cooldown_days=10).fillna(False).astype(bool)
+    
+    raw_risk_sell = (df['Swing_Score'] < 45.0) & (prev_swing >= 45.0) & (ad_ratio < 0.50)
+    df['Swing_Risk_Sell'] = apply_cooldown(raw_risk_sell, cooldown_days=10).fillna(False).astype(bool)
+
     return full_production_model, df
 
 
@@ -358,15 +378,28 @@ def main():
         scored_map[d_str] = {
             'Swing_Score': float(row['Swing_Score']),
             'Swing_Regime': str(row['Swing_Regime']),
-            'Swing_Prob_Followthrough': float(row['Swing_Prob_Followthrough'])
+            'Swing_Prob_Followthrough': float(row['Swing_Prob_Followthrough']),
+            'Swing_Thrust_Buy': bool(row['Swing_Thrust_Buy']),
+            'Swing_Risk_Sell': bool(row['Swing_Risk_Sell'])
         }
     
+    thrust_count = 0
+    risk_count = 0
     for row in breadth_data:
         d = row.get('Date')
         if d in scored_map:
             row['Swing_Score'] = scored_map[d]['Swing_Score']
             row['Swing_Regime'] = scored_map[d]['Swing_Regime']
             row['Swing_Prob_Followthrough'] = scored_map[d]['Swing_Prob_Followthrough']
+            row['Swing_Thrust_Buy'] = scored_map[d]['Swing_Thrust_Buy']
+            row['Swing_Risk_Sell'] = scored_map[d]['Swing_Risk_Sell']
+        else:
+            row['Swing_Thrust_Buy'] = False
+            row['Swing_Risk_Sell'] = False
+        if row.get('Swing_Thrust_Buy'):
+            thrust_count += 1
+        if row.get('Swing_Risk_Sell'):
+            risk_count += 1
             
     # Save back to data/market_breadth.json and web/public/market_breadth.json
     with open('data/market_breadth.json', 'w') as f:
@@ -377,6 +410,8 @@ def main():
         json.dump(breadth_data, f, indent=2)
         
     print(f"Successfully updated market_breadth.json ({len(breadth_data)} records) with Swing Scores!")
+    print(f"  • Total Swing_Thrust_Buy signals: {thrust_count}")
+    print(f"  • Total Swing_Risk_Sell signals: {risk_count}")
     
     # Print Latest Status
     latest = breadth_data[-1]

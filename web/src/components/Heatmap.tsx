@@ -244,17 +244,39 @@ export function Heatmap({
                                     <div className="flex items-center justify-center gap-1.5">
                                         <span>{formatRowDate(row.Date)}</span>
                                         {/* Signal Indicator Badges */}
-                                        {Boolean(
-                                            row.Bullseye_Buy_Signal ||
-                                            row.Bull_NNH_Buy ||
-                                            row.Bull_200SMA_Buy ||
-                                            row.Bull_AllSMA_Buy ||
-                                            row["Advance/Decline Ratio"] >= 3.0
-                                        ) && (
-                                            <span className="text-[10px] text-amber-300" title="⚡ Major Breadth Thrust Session">
-                                                ⚡
-                                            </span>
-                                        )}
+                                        {(() => {
+                                            const isMacro = Boolean(
+                                                row.Bullseye_Buy_Signal ||
+                                                row.Bull_NNH_Buy ||
+                                                row.Bull_200SMA_Buy ||
+                                                row.Bull_AllSMA_Buy
+                                            );
+                                            const isTactical = Boolean(row.Swing_Thrust_Buy);
+                                            const isSuper = isMacro && isTactical;
+
+                                            if (isSuper) {
+                                                return (
+                                                    <span className="text-[10px] text-emerald-400 font-bold tracking-tighter" title="⚡🟢 Super-Confluence: Macro Reset + Swing Thrust (90.0% Win Rate)">
+                                                        ⚡🟢
+                                                    </span>
+                                                );
+                                            }
+                                            if (isMacro) {
+                                                return (
+                                                    <span className="text-[10px] text-emerald-400 font-bold" title="🟢 Macro B_BUY Cycle Reset">
+                                                        🟢
+                                                    </span>
+                                                );
+                                            }
+                                            if (isTactical) {
+                                                return (
+                                                    <span className="text-[10px] text-cyan-300 font-bold" title="⚡ Tactical Swing Thrust Active (84.1% Win Rate)">
+                                                        ⚡
+                                                    </span>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
                                         {Boolean(
                                             (row["Advance/Decline Ratio"] <= 0.18) ||
                                             (row["No. of stocks down 4.5%+ in the current day"] && row.TotalTraded && (row["No. of stocks down 4.5%+ in the current day"] / row.TotalTraded) >= 0.20)

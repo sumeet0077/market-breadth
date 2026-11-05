@@ -399,6 +399,7 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
             d.Bull_NNH_Buy ||
             d.Bull_200SMA_Buy ||
             d.Bull_AllSMA_Buy ||
+            d.Swing_Thrust_Buy ||
             (d["Advance/Decline Ratio"] && d["Advance/Decline Ratio"] >= 2.5)
         );
       }
@@ -986,20 +987,27 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
                     <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider">
                       Swing Momentum (3–10D)
                     </h3>
-                    <span className="text-[11px] font-mono text-slate-400">
-                      Score:{" "}
-                      <strong
-                        className={`font-bold ${
-                          swingScore >= 70
-                            ? "text-emerald-400"
-                            : swingScore >= 45
-                            ? "text-cyan-400"
-                            : "text-rose-400"
-                        }`}
-                      >
-                        {swingScore.toFixed(1)}/100
-                      </strong>
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {activeView.Swing_Thrust_Buy && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-950/90 text-cyan-300 border border-cyan-500/80 shadow-[0_0_12px_rgba(6,182,212,0.4)] animate-pulse flex items-center gap-1">
+                          ⚡ SWING THRUST ACTIVE
+                        </span>
+                      )}
+                      <span className="text-[11px] font-mono text-slate-400">
+                        Score:{" "}
+                        <strong
+                          className={`font-bold ${
+                            swingScore >= 70
+                              ? "text-emerald-400"
+                              : swingScore >= 45
+                              ? "text-cyan-400"
+                              : "text-rose-400"
+                          }`}
+                        >
+                          {swingScore.toFixed(1)}/100
+                        </strong>
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800/80 px-3 py-2 rounded-xl text-xs font-bold">
@@ -1146,6 +1154,16 @@ export function DashboardClient({ initialData, initialTab, user: propUser }: Das
                   <div className="pt-1.5 border-t border-slate-800/80 text-[10px] text-slate-400 italic">
                     Style: <strong className="text-slate-300 not-italic font-medium">{directives.tacticalStyle}</strong>
                   </div>
+
+                  {activeView.Swing_Thrust_Buy && (
+                    <button
+                      onClick={() => setActiveTab("charts")}
+                      className="w-full mt-1 py-1.5 px-3 bg-gradient-to-r from-cyan-950/90 to-indigo-950/90 hover:from-cyan-900 hover:to-indigo-900 text-cyan-300 font-bold text-xs rounded-xl border border-cyan-500/70 shadow-lg shadow-cyan-950/40 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <span>⚡ Swing Thrust Active</span>
+                      <span className="text-cyan-400 font-mono">→ View Chart Overlay</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );

@@ -24,6 +24,7 @@ CRITICAL_FIELDS = [
     "Date",
     "Regime_State",
     "Swing_Score",
+    "Swing_Thrust_Buy",
     "Advance/Decline Ratio",
     "TotalTraded",
     "No of stocks above 200 day SMA",
@@ -112,6 +113,17 @@ def validate_pipeline_data():
         ad = row.get("Advance/Decline Ratio")
         if ad is not None and ad < 0:
             print(f"  ❌ Negative Advance/Decline Ratio ({ad}) on session {d_str}")
+            boundary_errors += 1
+
+        # Tier 1 Schema Boolean Check: Swing_Thrust_Buy & Swing_Risk_Sell
+        stb = row.get("Swing_Thrust_Buy")
+        if stb is None or not isinstance(stb, bool):
+            print(f"  ❌ Missing or non-boolean Swing_Thrust_Buy ({stb}) on session {d_str}")
+            boundary_errors += 1
+
+        srs = row.get("Swing_Risk_Sell")
+        if srs is not None and not isinstance(srs, bool):
+            print(f"  ❌ Non-boolean Swing_Risk_Sell ({srs}) on session {d_str}")
             boundary_errors += 1
 
     if null_errors > 0 or boundary_errors > 0:

@@ -49,9 +49,9 @@ def extract_features(df):
     features_df['NNH_Thrust_2D'] = features_df['Net_New_Highs_Pct'] - features_df['Net_New_Highs_Pct'].shift(2)
     features_df['Macro_NNH_20D'] = features_df['Net_New_Highs_Pct'].rolling(20, min_periods=5).mean()
     
-    # Forward fill or drop NAs safely for modeling
+    # Forward fill or backfill NAs safely for modeling without dropping rows
     clean_cols = ['AD_Velocity', 'Pct_Above_50D', 'Pct_Above_200D', 'Pct_Above_AllSMA', 'Macro_NNH_20D']
-    features_df = features_df.dropna(subset=clean_cols).reset_index(drop=True)
+    features_df[clean_cols] = features_df[clean_cols].bfill().ffill()
     
     return features_df
 
@@ -297,13 +297,31 @@ def main():
     
     # Filter out NaN rows
     df_clean = df_signals.dropna(subset=['Prob_Bear_Regime']).copy()
+    
+    # Ensure boolean signal columns remain bool, not 0/1 from fillna
+    bool_signal_cols = [
+        'Bullseye_Buy', 'Bullseye_Sell', 'Bullseye_Buy_Signal', 'Bullseye_Sell_Signal',
+        'Bull_NNH_Buy', 'Bull_NNH_Sell', 'Bull_200SMA_Buy', 'Bull_200SMA_Sell',
+        'Bull_AllSMA_Buy', 'Bull_AllSMA_Sell', 'Swing_Thrust_Buy', 'Swing_Risk_Sell'
+    ]
+    for col in bool_signal_cols:
+        if col in df_clean.columns:
+            df_clean[col] = df_clean[col].fillna(False).astype(bool)
+        else:
+            df_clean[col] = False
+
     df_clean = df_clean.fillna(0)
     
     records = df_clean.to_dict(orient='records')
     with open(JSON_FILE, "w") as f:
-        json.dump(records, f)
+        json.dump(records, f, indent=2)
         
-    print(f"Saved per-chart regime signals to {JSON_FILE}")
+    web_json_file = os.path.join("web", "public", "market_breadth.json")
+    os.makedirs(os.path.dirname(web_json_file), exist_ok=True)
+    with open(web_json_file, "w") as f:
+        json.dump(records, f, indent=2)
+        
+    print(f"Saved {len(records)} per-chart regime signals synchronously to {JSON_FILE} and {web_json_file}")
 
 if __name__ == "__main__":
     main()
