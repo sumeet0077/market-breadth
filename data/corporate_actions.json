@@ -530,5 +530,12 @@
     "action": "SPLIT",
     "ratio": 5.0,
     "description": "5:1 Stock Split (auto-detected)"
+  },
+  {
+    "symbol": "PASHUPATI",
+    "ex_date": "2026-11-13",
+    "action": "SPLIT",
+    "ratio": 2.5,
+    "description": "5:2 Stock Split (NSE Circular: Bonus 3:2)"
   }
 ]
