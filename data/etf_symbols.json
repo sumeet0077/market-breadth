@@ -1,6 +1,6 @@
 {
   "description": "NSE Active and Historical Exchange Traded Funds (ETFs) and Exclusion Registry",
-  "count": 527,
+  "count": 528,
   "re_pattern": "-RE.*",
   "etf_symbols": [
     "ABGSEC",
@@ -245,6 +245,7 @@
     "IVZINGOLD",
     "IVZINNIFTY",
     "IVZSENSEX",
+    "IVZSILVER",
     "JUNIORBEES",
     "KOTAKALPHA",
     "KOTAKBKETF",
