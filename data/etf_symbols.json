@@ -1,6 +1,6 @@
 {
   "description": "NSE Active and Historical Exchange Traded Funds (ETFs) and Exclusion Registry",
-  "count": 534,
+  "count": 535,
   "re_pattern": "-RE.*",
   "etf_symbols": [
     "ABGSEC",
@@ -427,6 +427,7 @@
     "PHARMABEES",
     "PHARMAIETF",
     "POWERIETF",
+    "PRAXIS-RE3",
     "PSUBANK",
     "PSUBANKADD",
     "PSUBNKBEES",
